@@ -12,104 +12,61 @@ export default function SignupPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
 
   const handleSignup = async () => {
+    if (!email || !password || !orgName) { setError('Please fill in all fields'); return }
+    if (password.length < 6) { setError('Password must be at least 6 characters'); return }
     setLoading(true)
     setError('')
-
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    })
-
-    if (error) {
-      setError(error.message)
-      setLoading(false)
-      return
-    }
-
+    const supabase = createClient()
+    const { data, error } = await supabase.auth.signUp({ email, password })
+    if (error) { setError(error.message); setLoading(false); return }
     if (data.user) {
-      // Create organization
-      const slug = orgName.toLowerCase().replace(/\s+/g, '-')
-      await supabase.from('organizations').insert({
+      const slug = orgName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+      const { error: orgError } = await supabase.from('organizations').insert({
         name: orgName,
-        slug: slug,
+        slug,
         owner_id: data.user.id,
-      })
-
+      } as never)
+      if (orgError) console.error('Org create error:', orgError)
       router.push('/dashboard')
+      router.refresh()
     }
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          Create your account
-        </h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Create your account</h1>
         <p className="text-gray-500 mb-6">Start tracking your leads today</p>
-
-        {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
-            {error}
-          </div>
-        )}
-
+        {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">{error}</div>}
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Organization Name
-            </label>
-            <input
-              type="text"
-              value={orgName}
-              onChange={(e) => setOrgName(e.target.value)}
+            <label className="block text-sm font-medium text-gray-700 mb-1">Organization Name</label>
+            <input type="text" value={orgName} onChange={(e) => setOrgName(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="My Company"
-            />
+              placeholder="My Company" />
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="you@example.com"
-            />
+              placeholder="you@example.com" />
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="••••••••"
-            />
+              placeholder="Min. 6 characters" />
           </div>
-
-          <button
-            onClick={handleSignup}
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition"
-          >
+          <button onClick={handleSignup} disabled={loading}
+            className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition">
             {loading ? 'Creating account...' : 'Create Account'}
           </button>
         </div>
-
         <p className="text-center text-sm text-gray-500 mt-4">
           Already have an account?{' '}
-          <Link href="/login" className="text-blue-600 hover:underline">
-            Sign in
-          </Link>
+          <Link href="/login" className="text-blue-600 hover:underline">Sign in</Link>
         </p>
       </div>
     </div>
