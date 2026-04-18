@@ -2,12 +2,13 @@ import Razorpay from 'razorpay'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-const razorpay = new Razorpay({
+
+export async function POST() {
+
+  const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID!,
   key_secret: process.env.RAZORPAY_KEY_SECRET!,
 })
-
-export async function POST() {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
