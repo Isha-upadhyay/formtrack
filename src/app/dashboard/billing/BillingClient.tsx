@@ -92,7 +92,7 @@ export default function BillingClient({ subscription }: { subscription: Subscrip
             {isPro ? '⚡ Pro' : '🆓 Free'}
           </span>
           <span className="text-gray-500 text-sm">
-            {isPro ? 'All features unlocked' : 'Limited to 1 form, 50 leads/month'}
+            {isPro ? 'All features unlocked' : 'Limited to 2 forms, 100 leads/month'}
           </span>
         </div>
       </div>
@@ -104,7 +104,7 @@ export default function BillingClient({ subscription }: { subscription: Subscrip
           <h3 className="font-bold text-gray-900 text-lg mb-1">Free</h3>
           <p className="text-3xl font-extrabold text-gray-900 mb-4">₹0<span className="text-base font-normal text-gray-400">/mo</span></p>
           <ul className="space-y-2 text-sm text-gray-600 mb-6">
-            {['1 form', '50 leads/month', 'Basic source tracking', 'Embed on website'].map(f => (
+            {['2 forms', '100 leads/month', 'Basic source tracking', 'Embed on website'].map(f => (
               <li key={f} className="flex items-center gap-2">
                 <span className="text-green-500">✓</span> {f}
               </li>
