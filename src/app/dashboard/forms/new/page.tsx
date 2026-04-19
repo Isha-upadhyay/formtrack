@@ -43,7 +43,7 @@ const TEMPLATES = [
       { id: 'email', type: 'email', label: 'Email', placeholder: 'you@example.com', required: true },
       { id: 'phone', type: 'phone', label: 'Phone', placeholder: 'Your number', required: true },
       { id: 'service', type: 'select', label: 'Service Required', required: true, options: ['Web Design', 'Mobile App', 'SEO', 'Digital Marketing', 'Other'] },
-      { id: 'description', type: 'textarea', label: 'Project Description', placeholder: 'Tell us about your project', required: true },
+      { id: 'desc', type: 'textarea', label: 'Project Description', placeholder: 'Tell us about your project', required: true },
     ],
     settings: { submitLabel: 'Request Quote', successMessage: 'Custom quote coming within 24 hours!', bgColor: '#ffffff', accentColor: '#2563eb', fontFamily: 'Inter, sans-serif', borderRadius: '8px', autoReplyEnabled: false }
   },
@@ -89,19 +89,35 @@ export default function NewFormPage() {
   const [selected, setSelected] = useState<string | null>(null)
   const [formName, setFormName] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const router = useRouter()
   const supabase = createClient()
 
   const handleCreate = async () => {
     if (!selected || !formName.trim()) return
     setLoading(true)
+    setError('')
 
     const template = TEMPLATES.find(t => t.id === selected)!
-
     const { data: org } = await (supabase.from('organizations') as any).select('id').single()
     if (!org) { setLoading(false); return }
 
-    const { data: form, error } = await (supabase.from('forms') as any).insert({
+    // Fix #6: Check plan limits before creating
+    const { data: sub } = await (supabase.from('subscriptions') as any)
+      .select('plan, status').eq('org_id', org.id).single()
+    const isPro = sub?.status === 'active' && sub?.plan === 'pro'
+
+    if (!isPro) {
+      const { count } = await (supabase.from('forms') as any)
+        .select('*', { count: 'exact', head: true }).eq('org_id', org.id)
+      if ((count ?? 0) >= 2) {
+        setError('Free plan allows 2 forms. Upgrade to Pro for unlimited forms.')
+        setLoading(false)
+        return
+      }
+    }
+
+    const { data: form, error: insertErr } = await (supabase.from('forms') as any).insert({
       name: formName,
       org_id: org.id,
       fields: template.fields,
@@ -109,7 +125,7 @@ export default function NewFormPage() {
       is_active: true,
     }).select().single()
 
-    if (!error && form) {
+    if (!insertErr && form) {
       router.push(`/dashboard/forms/${form.id}/edit`)
     }
     setLoading(false)
@@ -122,7 +138,6 @@ export default function NewFormPage() {
         <p className="text-gray-500 text-sm mt-1">Choose a template to get started quickly</p>
       </div>
 
-      {/* Form Name */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 mb-6">
         <label className="block text-sm font-medium text-gray-700 mb-2">Form Name</label>
         <input
@@ -134,8 +149,7 @@ export default function NewFormPage() {
         />
       </div>
 
-      {/* Templates */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         {TEMPLATES.map((template) => (
           <button
             key={template.id}
@@ -153,7 +167,16 @@ export default function NewFormPage() {
         ))}
       </div>
 
-      {/* Create Button */}
+      {/* Fix #6: Show plan limit error */}
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between">
+          <p className="text-sm text-red-700">{error}</p>
+          <a href="/dashboard/billing" className="text-sm font-semibold text-blue-600 hover:underline ml-4 whitespace-nowrap">
+            Upgrade to Pro →
+          </a>
+        </div>
+      )}
+
       <div className="flex items-center gap-4">
         <button
           onClick={handleCreate}

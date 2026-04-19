@@ -35,7 +35,7 @@ export default function HomePage() {
           {[
             { icon: '🎯', title: 'Source Tracking', desc: 'Every lead tagged with UTM source, medium, and campaign automatically.' },
             { icon: '📋', title: 'Form Builder', desc: '8 templates. Custom fields. Custom branding. Embed anywhere.' },
-            { icon: '✉️', title: 'Auto Reply', desc: 'Connect Gmail or Outlook. Auto-reply from your real inbox instantly.' },
+            { icon: '📧', title: 'Lead Notifications', desc: 'Get an email the moment a lead submits. Never miss a hot prospect.' },
           ].map((f) => (
             <div key={f.title} className="bg-gray-50 rounded-2xl p-6">
               <div className="text-3xl mb-3">{f.icon}</div>

@@ -1,254 +1,157 @@
 (function () {
-  const script = document.currentScript || (function () {
-    const scripts = document.getElementsByTagName('script')
+  var script = document.currentScript || (function () {
+    var scripts = document.getElementsByTagName('script')
     return scripts[scripts.length - 1]
   })()
 
-  const formId = script.getAttribute('data-form-id')
+  var formId = script.getAttribute('data-form-id')
   if (!formId) return
 
-  // Fix — properly get base URL
-  const scriptSrc = script.src
-  const url = new URL(scriptSrc)
-  const baseUrl = url.origin
+  var baseUrl = new URL(script.src).origin
 
-  // Capture UTM params
-  const urlParams = new URLSearchParams(window.location.search)
-  const utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']
-  const utmParams = {}
-  utmKeys.forEach(key => {
-    const val = urlParams.get(key)
+  // ─── UTM Cookie Helpers ─────────────────────────────────────────────────────
+  function setCookie(name, value, days) {
+    var d = new Date()
+    d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000)
+    document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + d.toUTCString() + '; path=/'
+  }
+  function getCookie(name) {
+    var nameEQ = name + '='
+    var parts = document.cookie.split(';')
+    for (var i = 0; i < parts.length; i++) {
+      var c = parts[i].trim()
+      if (c.indexOf(nameEQ) === 0) return decodeURIComponent(c.substring(nameEQ.length))
+    }
+    return null
+  }
+
+  // Persist fresh UTMs from URL into cookies (30 days), then read back from cookies
+  // This ensures UTMs survive multi-page journeys (ad click -> browse -> submit)
+  var utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']
+  var urlParams = new URLSearchParams(window.location.search)
+  var utmParams = {}
+
+  utmKeys.forEach(function (key) {
+    var fromUrl = urlParams.get(key)
+    if (fromUrl) setCookie('ft_' + key, fromUrl, 30)
+    var val = getCookie('ft_' + key)
     if (val) utmParams[key] = val
   })
 
-  // Create container
-  const containerId = 'formtrack-' + formId
-  const container = document.createElement('div')
-  container.id = containerId
-  container.style.cssText = 'width:100%;max-width:480px;margin:0 auto;font-family:Inter,sans-serif;'
+  // ─── Container ──────────────────────────────────────────────────────────────
+  var container = document.createElement('div')
+  container.style.cssText = 'width:100%;max-width:480px;margin:0 auto;'
   script.parentNode.insertBefore(container, script.nextSibling)
-
-  // Loading state
   container.innerHTML = '<p style="color:#6b7280;font-size:14px;">Loading form...</p>'
 
-  // Fetch form
   fetch(baseUrl + '/api/forms/' + formId)
-    .then(res => res.json())
-    .then(form => {
-      if (!form || form.error) {
-        container.innerHTML = '<p style="color:#ef4444;font-size:14px;">Form not found.</p>'
-        return
-      }
+    .then(function (r) { return r.json() })
+    .then(function (form) {
+      if (!form || form.error) { container.innerHTML = '<p style="color:#ef4444;">Form not found.</p>'; return }
       renderForm(form)
     })
-    .catch(() => {
-      container.innerHTML = '<p style="color:#ef4444;font-size:14px;">Failed to load form.</p>'
-    })
+    .catch(function () { container.innerHTML = '<p style="color:#ef4444;">Failed to load form.</p>' })
 
   function renderForm(form) {
-    const s = form.settings || {}
-    const bgColor = s.bgColor || '#ffffff'
-    const accentColor = s.accentColor || '#2563eb'
-    const borderRadius = s.borderRadius || '8px'
-    const fontFamily = s.fontFamily || 'Inter, sans-serif'
-    const submitLabel = s.submitLabel || 'Submit'
-    const successMessage = s.successMessage || 'Thank you!'
+    var s = form.settings || {}
+    var bg = s.bgColor || '#fff', accent = s.accentColor || '#2563eb'
+    var br = s.borderRadius || '8px', ff = s.fontFamily || 'Inter,sans-serif'
+    var submitLabel = s.submitLabel || 'Submit'
+    var successMsg = s.successMessage || 'Thank you!'
 
     container.innerHTML = ''
+    var wrapper = document.createElement('div')
+    wrapper.style.cssText = 'background:' + bg + ';border-radius:12px;padding:32px;box-shadow:0 1px 3px rgba(0,0,0,.1);font-family:' + ff
+    var h2 = document.createElement('h2')
+    h2.textContent = form.name
+    h2.style.cssText = 'font-size:20px;font-weight:700;color:#111827;margin:0 0 20px 0'
+    wrapper.appendChild(h2)
 
-    const wrapper = document.createElement('div')
-    wrapper.style.cssText = `
-      background:${bgColor};
-      border-radius:12px;
-      padding:32px;
-      box-shadow:0 1px 3px rgba(0,0,0,0.1);
-      font-family:${fontFamily};
-    `
+    var values = {}, errEls = {}
+    var IS = 'width:100%;border:1px solid #e5e7eb;padding:10px 12px;font-size:14px;color:#111827;outline:none;box-sizing:border-box;border-radius:' + br + ';font-family:' + ff + ';background:#fff;'
+    var submitting = false  // duplicate-submit guard
 
-    const title = document.createElement('h2')
-    title.textContent = form.name
-    title.style.cssText = 'font-size:20px;font-weight:700;color:#111827;margin:0 0 20px 0;'
-    wrapper.appendChild(title)
+    form.fields.forEach(function (f) {
+      var g = document.createElement('div'); g.style.marginBottom = '16px'
+      var lbl = document.createElement('label')
+      lbl.style.cssText = 'display:block;font-size:13px;font-weight:500;color:#374151;margin-bottom:4px'
+      lbl.textContent = f.label + (f.required ? ' *' : '')
+      g.appendChild(lbl)
 
-    const values = {}
-    const errorEls = {}
+      var err = document.createElement('p')
+      err.style.cssText = 'color:#ef4444;font-size:12px;margin:4px 0 0 0;display:none'
+      errEls[f.id] = err
 
-    form.fields.forEach(field => {
-      const group = document.createElement('div')
-      group.style.cssText = 'margin-bottom:16px;'
-
-      const label = document.createElement('label')
-      label.style.cssText = 'display:block;font-size:13px;font-weight:500;color:#374151;margin-bottom:4px;'
-      label.textContent = field.label + (field.required ? ' *' : '')
-      group.appendChild(label)
-
-      const inputStyle = `
-        width:100%;
-        border:1px solid #e5e7eb;
-        padding:10px 12px;
-        font-size:14px;
-        color:#111827;
-        outline:none;
-        box-sizing:border-box;
-        border-radius:${borderRadius};
-        font-family:${fontFamily};
-        background:#fff;
-      `
-
-      let input
-
-      if (field.type === 'textarea') {
-        input = document.createElement('textarea')
-        input.rows = 4
-        input.style.resize = 'vertical'
-      } else if (field.type === 'select') {
-        input = document.createElement('select')
-        input.style.cssText = inputStyle + 'cursor:pointer;'
-        const defaultOpt = document.createElement('option')
-        defaultOpt.value = ''
-        defaultOpt.textContent = 'Select an option'
-        input.appendChild(defaultOpt);
-        (field.options || []).forEach(opt => {
-          const o = document.createElement('option')
-          o.value = opt
-          o.textContent = opt
-          input.appendChild(o)
-        })
-        input.addEventListener('change', () => { values[field.id] = input.value })
-        const errEl = document.createElement('p')
-        errEl.style.cssText = 'color:#ef4444;font-size:12px;margin:4px 0 0 0;display:none;'
-        errorEls[field.id] = errEl
-        group.appendChild(input)
-        group.appendChild(errEl)
-        wrapper.appendChild(group)
-        return
-      } else if (field.type === 'radio') {
-        const radioGroup = document.createElement('div');
-        (field.options || []).forEach(opt => {
-          const radioLabel = document.createElement('label')
-          radioLabel.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:14px;color:#374151;margin-bottom:6px;cursor:pointer;'
-          const radio = document.createElement('input')
-          radio.type = 'radio'
-          radio.name = field.id
-          radio.value = opt
-          radio.addEventListener('change', () => { values[field.id] = opt })
-          radioLabel.appendChild(radio)
-          radioLabel.appendChild(document.createTextNode(opt))
-          radioGroup.appendChild(radioLabel)
-        })
-        const errEl = document.createElement('p')
-        errEl.style.cssText = 'color:#ef4444;font-size:12px;margin:4px 0 0 0;display:none;'
-        errorEls[field.id] = errEl
-        group.appendChild(radioGroup)
-        group.appendChild(errEl)
-        wrapper.appendChild(group)
-        return
-      } else if (field.type === 'checkbox') {
-        const cbGroup = document.createElement('div')
-        const checked = [];
-        (field.options || []).forEach(opt => {
-          const cbLabel = document.createElement('label')
-          cbLabel.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:14px;color:#374151;margin-bottom:6px;cursor:pointer;'
-          const cb = document.createElement('input')
-          cb.type = 'checkbox'
-          cb.value = opt
-          cb.addEventListener('change', () => {
-            if (cb.checked) checked.push(opt)
-            else checked.splice(checked.indexOf(opt), 1)
-            values[field.id] = checked.join(',')
+      if (f.type === 'textarea') {
+        var ta = document.createElement('textarea'); ta.rows = 4; ta.style.cssText = IS; ta.placeholder = f.placeholder || ''; ta.style.resize = 'vertical'
+        ta.addEventListener('input', function () { values[f.id] = ta.value })
+        g.appendChild(ta)
+      } else if (f.type === 'select') {
+        var sel = document.createElement('select'); sel.style.cssText = IS + 'cursor:pointer'
+        var def = document.createElement('option'); def.value = ''; def.textContent = 'Select an option'; sel.appendChild(def);
+        (f.options || []).forEach(function (o) { var op = document.createElement('option'); op.value = o; op.textContent = o; sel.appendChild(op) })
+        sel.addEventListener('change', function () { values[f.id] = sel.value })
+        g.appendChild(sel)
+      } else if (f.type === 'radio') {
+        var rg = document.createElement('div');
+        (f.options || []).forEach(function (o) {
+          var rl = document.createElement('label'); rl.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:14px;color:#374151;margin-bottom:6px;cursor:pointer'
+          var ri = document.createElement('input'); ri.type = 'radio'; ri.name = f.id; ri.value = o
+          ri.addEventListener('change', function () { values[f.id] = o })
+          rl.appendChild(ri); rl.appendChild(document.createTextNode(o)); rg.appendChild(rl)
+        }); g.appendChild(rg)
+      } else if (f.type === 'checkbox') {
+        var cg = document.createElement('div'), chkd = [];
+        (f.options || []).forEach(function (o) {
+          var cl = document.createElement('label'); cl.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:14px;color:#374151;margin-bottom:6px;cursor:pointer'
+          var ci = document.createElement('input'); ci.type = 'checkbox'; ci.value = o
+          ci.addEventListener('change', function () {
+            if (ci.checked) chkd.push(o); else chkd.splice(chkd.indexOf(o), 1)
+            values[f.id] = chkd.join(',')
           })
-          cbLabel.appendChild(cb)
-          cbLabel.appendChild(document.createTextNode(opt))
-          cbGroup.appendChild(cbLabel)
-        })
-        group.appendChild(cbGroup)
-        wrapper.appendChild(group)
-        return
+          cl.appendChild(ci); cl.appendChild(document.createTextNode(o)); cg.appendChild(cl)
+        }); g.appendChild(cg)
       } else {
-        input = document.createElement('input')
-        input.type = field.type === 'phone' ? 'tel' : field.type
+        var inp = document.createElement('input'); inp.type = f.type === 'phone' ? 'tel' : f.type
+        inp.placeholder = f.placeholder || ''; inp.style.cssText = IS
+        inp.addEventListener('focus', function () { inp.style.borderColor = accent })
+        inp.addEventListener('blur', function () { inp.style.borderColor = '#e5e7eb' })
+        inp.addEventListener('input', function () { values[f.id] = inp.value })
+        g.appendChild(inp)
       }
-
-      input.placeholder = field.placeholder || ''
-      input.style.cssText = inputStyle
-      input.addEventListener('focus', () => { input.style.borderColor = accentColor })
-      input.addEventListener('blur', () => { input.style.borderColor = '#e5e7eb' })
-      input.addEventListener('input', () => { values[field.id] = input.value })
-
-      const errEl = document.createElement('p')
-      errEl.style.cssText = 'color:#ef4444;font-size:12px;margin:4px 0 0 0;display:none;'
-      errorEls[field.id] = errEl
-
-      group.appendChild(input)
-      group.appendChild(errEl)
-      wrapper.appendChild(group)
+      g.appendChild(err); wrapper.appendChild(g)
     })
 
-    // Submit button
-    const btn = document.createElement('button')
+    var btn = document.createElement('button')
     btn.textContent = submitLabel
-    btn.style.cssText = `
-      width:100%;
-      background:${accentColor};
-      color:#ffffff;
-      border:none;
-      padding:12px;
-      font-size:14px;
-      font-weight:600;
-      cursor:pointer;
-      margin-top:8px;
-      border-radius:${borderRadius};
-      font-family:${fontFamily};
-    `
+    btn.style.cssText = 'width:100%;background:' + accent + ';color:#fff;border:none;padding:12px;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px;border-radius:' + br + ';font-family:' + ff
 
-    btn.addEventListener('click', () => {
-      let valid = true
-      form.fields.forEach(field => {
-        if (field.required && !values[field.id]?.trim()) {
+    btn.addEventListener('click', function () {
+      if (submitting) return  // prevent double-submit
+      var valid = true
+      form.fields.forEach(function (f) {
+        if (f.required && !values[f.id]?.trim()) {
           valid = false
-          if (errorEls[field.id]) {
-            errorEls[field.id].textContent = field.label + ' is required'
-            errorEls[field.id].style.display = 'block'
-          }
-        } else {
-          if (errorEls[field.id]) {
-            errorEls[field.id].style.display = 'none'
-          }
-        }
+          errEls[f.id].textContent = f.label + ' is required'; errEls[f.id].style.display = 'block'
+        } else { errEls[f.id].style.display = 'none' }
       })
       if (!valid) return
 
-      btn.textContent = 'Submitting...'
-      btn.disabled = true
+      submitting = true; btn.textContent = 'Submitting...'; btn.disabled = true
 
       fetch(baseUrl + '/api/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          form_id: formId,
-          data: values,
-          ...utmParams,
-          source_url: window.location.href,
-          referrer: document.referrer,
-        }),
+        body: JSON.stringify(Object.assign({ form_id: formId, data: values, source_url: window.location.href, referrer: document.referrer }, utmParams))
       })
-        .then(() => {
-          wrapper.innerHTML = `
-            <div style="text-align:center;padding:40px 20px;">
-              <div style="font-size:48px;margin-bottom:12px;">✅</div>
-              <h3 style="font-size:18px;font-weight:700;color:#111827;margin:0 0 8px 0;">Thank you!</h3>
-              <p style="color:#6b7280;font-size:14px;margin:0;">${successMessage}</p>
-            </div>
-          `
+        .then(function () {
+          wrapper.innerHTML = '<div style="text-align:center;padding:40px 20px"><div style="font-size:48px;margin-bottom:12px">✅</div><h3 style="font-size:18px;font-weight:700;color:#111827;margin:0 0 8px 0">Thank you!</h3><p style="color:#6b7280;font-size:14px;margin:0">' + successMsg + '</p></div>'
         })
-        .catch(() => {
-          btn.textContent = submitLabel
-          btn.disabled = false
+        .catch(function () {
+          submitting = false; btn.textContent = submitLabel; btn.disabled = false
           alert('Something went wrong. Please try again.')
         })
     })
-
-    wrapper.appendChild(btn)
-    container.appendChild(wrapper)
+    wrapper.appendChild(btn); container.appendChild(wrapper)
   }
 })()

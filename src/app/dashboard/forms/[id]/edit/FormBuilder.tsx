@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -23,6 +23,16 @@ interface FormSettings {
   fontFamily: string
   borderRadius: string
   autoReplyEnabled: boolean
+  notificationEmail?: string  // Fix #10: lead notification email
+}
+
+interface Form {
+  id: string
+  name: string
+  description?: string   // Fix #14: include description
+  fields: Field[]
+  settings: FormSettings
+  is_active: boolean
 }
 
 interface Form {
@@ -52,6 +62,7 @@ function generateId() {
 
 export default function FormBuilder({ form }: { form: Form }) {
   const [name, setName] = useState(form.name)
+  const [description, setDescription] = useState(form.description || '')  // Fix #14
   const [fields, setFields] = useState<Field[]>(form.fields || [])
   const [settings, setSettings] = useState<FormSettings>(form.settings || {
     submitLabel: 'Submit',
@@ -61,6 +72,7 @@ export default function FormBuilder({ form }: { form: Form }) {
     fontFamily: 'Inter, sans-serif',
     borderRadius: '8px',
     autoReplyEnabled: false,
+    notificationEmail: '',
   })
   const [activeTab, setActiveTab] = useState<'fields' | 'design' | 'settings' | 'embed'>('fields')
   const [selectedField, setSelectedField] = useState<string | null>(null)
@@ -105,11 +117,28 @@ export default function FormBuilder({ form }: { form: Form }) {
     setFields(newFields)
   }
 
+  // Fix #9: Native HTML5 drag-and-drop reorder
+  const dragFieldId = useRef<string | null>(null)
+  const onDragStart = (id: string) => { dragFieldId.current = id }
+  const onDragOver = (e: React.DragEvent, overId: string) => {
+    e.preventDefault()
+    if (!dragFieldId.current || dragFieldId.current === overId) return
+    const from = fields.findIndex(f => f.id === dragFieldId.current)
+    const to = fields.findIndex(f => f.id === overId)
+    if (from === -1 || to === -1) return
+    const reordered = [...fields]
+    const [moved] = reordered.splice(from, 1)
+    reordered.splice(to, 0, moved)
+    setFields(reordered)
+    dragFieldId.current = overId
+  }
+  const onDragEnd = () => { dragFieldId.current = null }
+
   // Save
   const handleSave = async () => {
     setSaving(true)
     await (supabase.from('forms') as any)
-      .update({ name, fields, settings, updated_at: new Date().toISOString() })
+      .update({ name, description, fields, settings, updated_at: new Date().toISOString() })
       .eq('id', form.id)
     setSaving(false)
     setSaved(true)
@@ -118,7 +147,10 @@ export default function FormBuilder({ form }: { form: Form }) {
   }
 
   const selectedFieldData = fields.find(f => f.id === selectedField)
-  const embedCode = `<script src="${typeof window !== 'undefined' ? window.location.origin : ''}/embed.js" data-form-id="${form.id}"></script>`
+  const [origin, setOrigin] = useState('')
+  useEffect(() => { setOrigin(window.location.origin) }, [])
+
+  const embedCode = `<script src="${origin}/embed.js" data-form-id="${form.id}"></script>`
 
   return (
     <div className="flex h-screen flex-col">
@@ -140,9 +172,9 @@ export default function FormBuilder({ form }: { form: Form }) {
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+    <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
         {/* Left Panel — Tabs */}
-        <div className="w-72 bg-white border-r border-gray-100 flex flex-col flex-shrink-0 overflow-y-auto">
+        <div className="w-full lg:w-72 bg-white border-b lg:border-b-0 lg:border-r border-gray-100 flex flex-col flex-shrink-0 overflow-y-auto max-h-[50vh] lg:max-h-full">
           {/* Tabs */}
           <div className="flex border-b border-gray-100">
             {(['fields', 'design', 'settings', 'embed'] as const).map((tab) => (
@@ -178,6 +210,10 @@ export default function FormBuilder({ form }: { form: Form }) {
                 <div className="space-y-2">
                   {fields.map((field, idx) => (
                     <div key={field.id}
+                      draggable
+                      onDragStart={() => onDragStart(field.id)}
+                      onDragOver={(e) => onDragOver(e, field.id)}
+                      onDragEnd={onDragEnd}
                       onClick={() => setSelectedField(field.id)}
                       className={`p-3 rounded-lg border cursor-pointer transition ${
                         selectedField === field.id
@@ -185,9 +221,13 @@ export default function FormBuilder({ form }: { form: Form }) {
                           : 'border-gray-100 hover:border-gray-200'
                       }`}>
                       <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900 truncate">{field.label}</p>
-                          <p className="text-xs text-gray-400">{field.type}{field.required ? ' · required' : ''}</p>
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          {/* Fix #9: Drag handle */}
+                          <span className="text-gray-300 cursor-grab active:cursor-grabbing select-none text-xs">⠿⠿</span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{field.label}</p>
+                            <p className="text-xs text-gray-400">{field.type}{field.required ? ' · required' : ''}</p>
+                          </div>
                         </div>
                         <div className="flex gap-1">
                           <button onClick={(e) => { e.stopPropagation(); moveField(field.id, 'up') }}
@@ -300,6 +340,15 @@ export default function FormBuilder({ form }: { form: Form }) {
           {activeTab === 'settings' && (
             <div className="p-4 space-y-4">
               <p className="text-xs font-semibold text-gray-400 uppercase mb-3">Form Settings</p>
+              {/* Fix #14: Description field */}
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Form Description</label>
+                <textarea value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={2}
+                  placeholder="Short description shown on the form"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
               <div>
                 <label className="text-xs font-medium text-gray-600 block mb-1">Submit Button Label</label>
                 <input value={settings.submitLabel}
@@ -312,6 +361,19 @@ export default function FormBuilder({ form }: { form: Form }) {
                   onChange={(e) => setSettings({ ...settings, successMessage: e.target.value })}
                   rows={3}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              {/* Fix #10: Notification email */}
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">
+                  📧 Lead Notification Email
+                </label>
+                <input
+                  type="email"
+                  value={settings.notificationEmail || ''}
+                  onChange={(e) => setSettings({ ...settings, notificationEmail: e.target.value })}
+                  placeholder="you@example.com"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <p className="text-xs text-gray-400 mt-1">Get an email every time a new lead submits this form</p>
               </div>
             </div>
           )}

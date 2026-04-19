@@ -35,14 +35,26 @@ export default function PublicForm({ form }: { form: Form }) {
   const [submitted, setSubmitted] = useState(false)
   const [sourceParams, setSourceParams] = useState<Record<string, string>>({})
 
-  // Capture UTM params from URL on load
+  // Capture UTM params — read from URL first, then fallback to cookies
+  // This ensures UTMs survive multi-page journeys (ad click → browse → submit)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']
+
+    const getCookie = (name: string) => {
+      const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'))
+      return match ? decodeURIComponent(match[1]) : null
+    }
+    const setCookie = (name: string, value: string) => {
+      const d = new Date(); d.setTime(d.getTime() + 30 * 24 * 60 * 60 * 1000)
+      document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + d.toUTCString() + '; path=/'
+    }
+
     const captured: Record<string, string> = {}
     utmKeys.forEach(key => {
-      const val = params.get(key)
-      if (val) captured[key] = val
+      const fromUrl = params.get(key)
+      if (fromUrl) { setCookie('ft_' + key, fromUrl); captured[key] = fromUrl }
+      else { const fromCookie = getCookie('ft_' + key); if (fromCookie) captured[key] = fromCookie }
     })
     captured.source_url = window.location.href
     captured.referrer = document.referrer
