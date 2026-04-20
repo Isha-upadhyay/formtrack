@@ -7,41 +7,16 @@ import { createClient } from '@/lib/supabase/client'
 type FieldType = 'text' | 'email' | 'phone' | 'textarea' | 'select' | 'radio' | 'checkbox' | 'number' | 'date'
 
 interface Field {
-  id: string
-  type: FieldType
-  label: string
-  placeholder?: string
-  required: boolean
-  options?: string[]
+  id: string; type: FieldType; label: string; placeholder?: string; required: boolean; options?: string[]
 }
 
 interface FormSettings {
-  submitLabel: string
-  successMessage: string
-  bgColor: string
-  accentColor: string
-  fontFamily: string
-  borderRadius: string
-  autoReplyEnabled: boolean
-  notificationEmail?: string  // Fix #10: lead notification email
+  submitLabel: string; successMessage: string; bgColor: string; accentColor: string
+  fontFamily: string; borderRadius: string; autoReplyEnabled: boolean; notificationEmail?: string
 }
 
 interface Form {
-  id: string
-  name: string
-  description?: string   // Fix #14: include description
-  fields: Field[]
-  settings: FormSettings
-  is_active: boolean
-}
-
-interface Form {
-  id: string
-  name: string
-  description?: string
-  fields: Field[]
-  settings: FormSettings
-  is_active: boolean
+  id: string; name: string; description?: string; fields: Field[]; settings: FormSettings; is_active: boolean
 }
 
 const FIELD_TYPES: { type: FieldType; label: string; icon: string }[] = [
@@ -56,23 +31,16 @@ const FIELD_TYPES: { type: FieldType; label: string; icon: string }[] = [
   { type: 'date', label: 'Date', icon: '📅' },
 ]
 
-function generateId() {
-  return Math.random().toString(36).slice(2, 8)
-}
+function generateId() { return Math.random().toString(36).slice(2, 8) }
 
 export default function FormBuilder({ form }: { form: Form }) {
   const [name, setName] = useState(form.name)
-  const [description, setDescription] = useState(form.description || '')  // Fix #14
+  const [description, setDescription] = useState(form.description || '')
   const [fields, setFields] = useState<Field[]>(form.fields || [])
   const [settings, setSettings] = useState<FormSettings>(form.settings || {
-    submitLabel: 'Submit',
-    successMessage: 'Thank you! We will be in touch.',
-    bgColor: '#ffffff',
-    accentColor: '#2563eb',
-    fontFamily: 'Inter, sans-serif',
-    borderRadius: '8px',
-    autoReplyEnabled: false,
-    notificationEmail: '',
+    submitLabel: 'Submit', successMessage: 'Thank you! We will be in touch.',
+    bgColor: '#ffffff', accentColor: '#2563eb', fontFamily: 'Inter, sans-serif',
+    borderRadius: '8px', autoReplyEnabled: false, notificationEmail: '',
   })
   const [activeTab, setActiveTab] = useState<'fields' | 'design' | 'settings' | 'embed'>('fields')
   const [selectedField, setSelectedField] = useState<string | null>(null)
@@ -81,32 +49,22 @@ export default function FormBuilder({ form }: { form: Form }) {
   const router = useRouter()
   const supabase = createClient()
 
-  // Add field
   const addField = (type: FieldType) => {
     const newField: Field = {
-      id: generateId(),
-      type,
+      id: generateId(), type,
       label: `${type.charAt(0).toUpperCase() + type.slice(1)} Field`,
-      placeholder: '',
-      required: false,
+      placeholder: '', required: false,
       options: ['select', 'radio', 'checkbox'].includes(type) ? ['Option 1', 'Option 2'] : undefined,
     }
-    setFields([...fields, newField])
-    setSelectedField(newField.id)
+    setFields([...fields, newField]); setSelectedField(newField.id)
   }
 
-  // Update field
   const updateField = (id: string, updates: Partial<Field>) => {
     setFields(fields.map(f => f.id === id ? { ...f, ...updates } : f))
   }
 
-  // Delete field
-  const deleteField = (id: string) => {
-    setFields(fields.filter(f => f.id !== id))
-    setSelectedField(null)
-  }
+  const deleteField = (id: string) => { setFields(fields.filter(f => f.id !== id)); setSelectedField(null) }
 
-  // Move field up/down
   const moveField = (id: string, dir: 'up' | 'down') => {
     const idx = fields.findIndex(f => f.id === id)
     if (dir === 'up' && idx === 0) return
@@ -117,7 +75,6 @@ export default function FormBuilder({ form }: { form: Form }) {
     setFields(newFields)
   }
 
-  // Fix #9: Native HTML5 drag-and-drop reorder
   const dragFieldId = useRef<string | null>(null)
   const onDragStart = (id: string) => { dragFieldId.current = id }
   const onDragOver = (e: React.DragEvent, overId: string) => {
@@ -126,63 +83,61 @@ export default function FormBuilder({ form }: { form: Form }) {
     const from = fields.findIndex(f => f.id === dragFieldId.current)
     const to = fields.findIndex(f => f.id === overId)
     if (from === -1 || to === -1) return
-    const reordered = [...fields]
-    const [moved] = reordered.splice(from, 1)
-    reordered.splice(to, 0, moved)
-    setFields(reordered)
-    dragFieldId.current = overId
+    const reordered = [...fields]; const [moved] = reordered.splice(from, 1)
+    reordered.splice(to, 0, moved); setFields(reordered); dragFieldId.current = overId
   }
   const onDragEnd = () => { dragFieldId.current = null }
 
-  // Save
   const handleSave = async () => {
     setSaving(true)
     await (supabase.from('forms') as any)
       .update({ name, description, fields, settings, updated_at: new Date().toISOString() })
       .eq('id', form.id)
-    setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-    router.refresh()
+    setSaving(false); setSaved(true)
+    setTimeout(() => setSaved(false), 2000); router.refresh()
   }
 
   const selectedFieldData = fields.find(f => f.id === selectedField)
   const [origin, setOrigin] = useState('')
   useEffect(() => { setOrigin(window.location.origin) }, [])
-
   const embedCode = `<script src="${origin}/embed.js" data-form-id="${form.id}"></script>`
 
+  const panelInputClass = "w-full border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 text-sm bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500/50 transition"
+  const labelClass = "text-xs font-medium text-gray-600 dark:text-slate-400 block mb-1"
+
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-screen flex-col bg-gray-50 dark:bg-[#0e1117]">
       {/* Top bar */}
-      <div className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between flex-shrink-0">
+      <div className="bg-white dark:bg-[#161b22] border-b border-gray-100 dark:border-white/8 px-6 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-4">
           <button onClick={() => router.push('/dashboard/forms')}
-            className="text-gray-400 hover:text-gray-600 text-sm">← Back</button>
+            className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 text-sm transition">
+            ← Back
+          </button>
           <input value={name} onChange={(e) => setName(e.target.value)}
-            className="font-semibold text-gray-900 bg-transparent border-none outline-none text-lg" />
+            className="font-semibold text-gray-900 dark:text-white bg-transparent border-none outline-none text-lg" />
         </div>
         <div className="flex items-center gap-3">
           <a href={`/f/${form.id}`} target="_blank"
-            className="text-sm text-blue-600 hover:underline">Preview ↗</a>
+            className="text-sm text-blue-600 dark:text-blue-400 hover:underline">Preview ↗</a>
           <button onClick={handleSave} disabled={saving}
-            className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition">
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-semibold disabled:opacity-50 transition shadow-sm shadow-blue-500/20">
             {saved ? '✅ Saved!' : saving ? 'Saving...' : 'Save Form'}
           </button>
         </div>
       </div>
 
-    <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
-        {/* Left Panel — Tabs */}
-        <div className="w-full lg:w-72 bg-white border-b lg:border-b-0 lg:border-r border-gray-100 flex flex-col flex-shrink-0 overflow-y-auto max-h-[50vh] lg:max-h-full">
+      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
+        {/* Left Panel */}
+        <div className="w-full lg:w-72 bg-white dark:bg-[#161b22] border-b lg:border-b-0 lg:border-r border-gray-100 dark:border-white/8 flex flex-col flex-shrink-0 overflow-y-auto max-h-[50vh] lg:max-h-full">
           {/* Tabs */}
-          <div className="flex border-b border-gray-100">
+          <div className="flex border-b border-gray-100 dark:border-white/8">
             {(['fields', 'design', 'settings', 'embed'] as const).map((tab) => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 className={`flex-1 py-3 text-xs font-semibold capitalize transition ${
                   activeTab === tab
-                    ? 'text-blue-600 border-b-2 border-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                    : 'text-gray-500 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300'
                 }`}>
                 {tab}
               </button>
@@ -192,20 +147,20 @@ export default function FormBuilder({ form }: { form: Form }) {
           {/* Fields Tab */}
           {activeTab === 'fields' && (
             <div className="p-4">
-              <p className="text-xs font-semibold text-gray-400 uppercase mb-3">Add Field</p>
+              <p className="text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase mb-3">Add Field</p>
               <div className="grid grid-cols-3 gap-2 mb-6">
                 {FIELD_TYPES.map((ft) => (
                   <button key={ft.type} onClick={() => addField(ft.type)}
-                    className="flex flex-col items-center gap-1 p-2 rounded-lg border border-gray-100 hover:border-blue-200 hover:bg-blue-50 transition text-center">
+                    className="flex flex-col items-center gap-1 p-2 rounded-xl border border-gray-100 dark:border-white/8 hover:border-blue-200 dark:hover:border-blue-500/40 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition text-center">
                     <span className="text-lg">{ft.icon}</span>
-                    <span className="text-xs text-gray-600">{ft.label}</span>
+                    <span className="text-xs text-gray-600 dark:text-slate-400">{ft.label}</span>
                   </button>
                 ))}
               </div>
 
-              <p className="text-xs font-semibold text-gray-400 uppercase mb-3">Form Fields</p>
+              <p className="text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase mb-3">Form Fields</p>
               {fields.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-6">No fields yet. Add one above!</p>
+                <p className="text-sm text-gray-400 dark:text-slate-600 text-center py-6">No fields yet. Add one above!</p>
               ) : (
                 <div className="space-y-2">
                   {fields.map((field, idx) => (
@@ -215,29 +170,28 @@ export default function FormBuilder({ form }: { form: Form }) {
                       onDragOver={(e) => onDragOver(e, field.id)}
                       onDragEnd={onDragEnd}
                       onClick={() => setSelectedField(field.id)}
-                      className={`p-3 rounded-lg border cursor-pointer transition ${
+                      className={`p-3 rounded-xl border cursor-pointer transition ${
                         selectedField === field.id
-                          ? 'border-blue-400 bg-blue-50'
-                          : 'border-gray-100 hover:border-gray-200'
+                          ? 'border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-500/15'
+                          : 'border-gray-100 dark:border-white/8 hover:border-gray-200 dark:hover:border-white/15'
                       }`}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
-                          {/* Fix #9: Drag handle */}
-                          <span className="text-gray-300 cursor-grab active:cursor-grabbing select-none text-xs">⠿⠿</span>
+                          <span className="text-gray-300 dark:text-slate-600 cursor-grab select-none text-xs">⠿⠿</span>
                           <div className="min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">{field.label}</p>
-                            <p className="text-xs text-gray-400">{field.type}{field.required ? ' · required' : ''}</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{field.label}</p>
+                            <p className="text-xs text-gray-400 dark:text-slate-500">{field.type}{field.required ? ' · required' : ''}</p>
                           </div>
                         </div>
                         <div className="flex gap-1">
                           <button onClick={(e) => { e.stopPropagation(); moveField(field.id, 'up') }}
                             disabled={idx === 0}
-                            className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-20">↑</button>
+                            className="p-1 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 disabled:opacity-20">↑</button>
                           <button onClick={(e) => { e.stopPropagation(); moveField(field.id, 'down') }}
                             disabled={idx === fields.length - 1}
-                            className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-20">↓</button>
+                            className="p-1 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 disabled:opacity-20">↓</button>
                           <button onClick={(e) => { e.stopPropagation(); deleteField(field.id) }}
-                            className="p-1 text-red-400 hover:text-red-600">×</button>
+                            className="p-1 text-red-400 dark:text-red-500 hover:text-red-600">×</button>
                         </div>
                       </div>
                     </div>
@@ -245,38 +199,36 @@ export default function FormBuilder({ form }: { form: Form }) {
                 </div>
               )}
 
-              {/* Field Editor */}
               {selectedFieldData && (
-                <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                  <p className="text-xs font-semibold text-gray-500 uppercase mb-3">Edit Field</p>
+                <div className="mt-6 p-4 bg-gray-50 dark:bg-white/4 rounded-xl border border-gray-100 dark:border-white/8">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-3">Edit Field</p>
                   <div className="space-y-3">
                     <div>
-                      <label className="text-xs font-medium text-gray-600 block mb-1">Label</label>
+                      <label className={labelClass}>Label</label>
                       <input value={selectedFieldData.label}
                         onChange={(e) => updateField(selectedFieldData.id, { label: e.target.value })}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        className={panelInputClass} />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-600 block mb-1">Placeholder</label>
+                      <label className={labelClass}>Placeholder</label>
                       <input value={selectedFieldData.placeholder || ''}
                         onChange={(e) => updateField(selectedFieldData.id, { placeholder: e.target.value })}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        className={panelInputClass} />
                     </div>
                     {selectedFieldData.options && (
                       <div>
-                        <label className="text-xs font-medium text-gray-600 block mb-1">Options (one per line)</label>
+                        <label className={labelClass}>Options (one per line)</label>
                         <textarea
                           value={selectedFieldData.options.join('\n')}
                           onChange={(e) => updateField(selectedFieldData.id, { options: e.target.value.split('\n') })}
-                          rows={4}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                          rows={4} className={panelInputClass} />
                       </div>
                     )}
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={selectedFieldData.required}
                         onChange={(e) => updateField(selectedFieldData.id, { required: e.target.checked })}
                         className="rounded" />
-                      <span className="text-sm text-gray-700">Required field</span>
+                      <span className="text-sm text-gray-700 dark:text-slate-300">Required field</span>
                     </label>
                   </div>
                 </div>
@@ -287,34 +239,34 @@ export default function FormBuilder({ form }: { form: Form }) {
           {/* Design Tab */}
           {activeTab === 'design' && (
             <div className="p-4 space-y-5">
-              <p className="text-xs font-semibold text-gray-400 uppercase mb-3">Appearance</p>
+              <p className="text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase mb-3">Appearance</p>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-2">Background Color</label>
+                <label className={labelClass}>Background Color</label>
                 <div className="flex items-center gap-2">
                   <input type="color" value={settings.bgColor}
                     onChange={(e) => setSettings({ ...settings, bgColor: e.target.value })}
-                    className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer" />
+                    className="w-10 h-10 rounded-lg border border-gray-200 dark:border-white/10 cursor-pointer" />
                   <input value={settings.bgColor}
                     onChange={(e) => setSettings({ ...settings, bgColor: e.target.value })}
-                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                    className={panelInputClass} />
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-2">Accent Color</label>
+                <label className={labelClass}>Accent Color</label>
                 <div className="flex items-center gap-2">
                   <input type="color" value={settings.accentColor}
                     onChange={(e) => setSettings({ ...settings, accentColor: e.target.value })}
-                    className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer" />
+                    className="w-10 h-10 rounded-lg border border-gray-200 dark:border-white/10 cursor-pointer" />
                   <input value={settings.accentColor}
                     onChange={(e) => setSettings({ ...settings, accentColor: e.target.value })}
-                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                    className={panelInputClass} />
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-2">Border Radius</label>
+                <label className={labelClass}>Border Radius</label>
                 <select value={settings.borderRadius}
                   onChange={(e) => setSettings({ ...settings, borderRadius: e.target.value })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                  className={panelInputClass}>
                   <option value="0px">Sharp (0px)</option>
                   <option value="4px">Small (4px)</option>
                   <option value="8px">Medium (8px)</option>
@@ -323,10 +275,10 @@ export default function FormBuilder({ form }: { form: Form }) {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-2">Font Family</label>
+                <label className={labelClass}>Font Family</label>
                 <select value={settings.fontFamily}
                   onChange={(e) => setSettings({ ...settings, fontFamily: e.target.value })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                  className={panelInputClass}>
                   <option value="Inter, sans-serif">Inter</option>
                   <option value="Georgia, serif">Georgia</option>
                   <option value="'Courier New', monospace">Courier New</option>
@@ -339,41 +291,30 @@ export default function FormBuilder({ form }: { form: Form }) {
           {/* Settings Tab */}
           {activeTab === 'settings' && (
             <div className="p-4 space-y-4">
-              <p className="text-xs font-semibold text-gray-400 uppercase mb-3">Form Settings</p>
-              {/* Fix #14: Description field */}
+              <p className="text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase mb-3">Form Settings</p>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Form Description</label>
-                <textarea value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={2}
-                  placeholder="Short description shown on the form"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <label className={labelClass}>Form Description</label>
+                <textarea value={description} onChange={(e) => setDescription(e.target.value)}
+                  rows={2} placeholder="Short description shown on the form" className={panelInputClass} />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Submit Button Label</label>
+                <label className={labelClass}>Submit Button Label</label>
                 <input value={settings.submitLabel}
                   onChange={(e) => setSettings({ ...settings, submitLabel: e.target.value })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className={panelInputClass} />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Success Message</label>
+                <label className={labelClass}>Success Message</label>
                 <textarea value={settings.successMessage}
                   onChange={(e) => setSettings({ ...settings, successMessage: e.target.value })}
-                  rows={3}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  rows={3} className={panelInputClass} />
               </div>
-              {/* Fix #10: Notification email */}
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">
-                  📧 Lead Notification Email
-                </label>
-                <input
-                  type="email"
-                  value={settings.notificationEmail || ''}
+                <label className={labelClass}>📧 Lead Notification Email</label>
+                <input type="email" value={settings.notificationEmail || ''}
                   onChange={(e) => setSettings({ ...settings, notificationEmail: e.target.value })}
-                  placeholder="you@example.com"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                <p className="text-xs text-gray-400 mt-1">Get an email every time a new lead submits this form</p>
+                  placeholder="you@example.com" className={panelInputClass} />
+                <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Get an email every time a new lead submits this form</p>
               </div>
             </div>
           )}
@@ -381,22 +322,22 @@ export default function FormBuilder({ form }: { form: Form }) {
           {/* Embed Tab */}
           {activeTab === 'embed' && (
             <div className="p-4">
-              <p className="text-xs font-semibold text-gray-400 uppercase mb-3">Embed This Form</p>
-              <p className="text-xs text-gray-500 mb-4">
+              <p className="text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase mb-3">Embed This Form</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mb-4">
                 Copy this code and paste it anywhere on your website — leads will be tracked automatically.
               </p>
-              <div className="bg-gray-900 rounded-xl p-4 mb-3">
+              <div className="bg-gray-900 dark:bg-black/50 border border-white/10 rounded-xl p-4 mb-3">
                 <code className="text-xs text-green-400 break-all">{embedCode}</code>
               </div>
               <button
                 onClick={() => { navigator.clipboard.writeText(embedCode) }}
-                className="w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition">
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-sm font-semibold transition shadow-sm shadow-blue-500/20">
                 Copy Embed Code
               </button>
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                <p className="text-xs text-blue-700 font-medium mb-1">Direct Link</p>
+              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 rounded-xl">
+                <p className="text-xs text-blue-700 dark:text-blue-400 font-medium mb-1">Direct Link</p>
                 <a href={`/f/${form.id}`} target="_blank"
-                  className="text-xs text-blue-600 hover:underline break-all">
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline break-all">
                   {typeof window !== 'undefined' ? window.location.origin : ''}/f/{form.id}
                 </a>
               </div>
@@ -405,8 +346,8 @@ export default function FormBuilder({ form }: { form: Form }) {
         </div>
 
         {/* Right Panel — Live Preview */}
-        <div className="flex-1 bg-gray-100 overflow-auto p-8">
-          <p className="text-xs font-semibold text-gray-400 uppercase text-center mb-6">Live Preview</p>
+        <div className="flex-1 bg-gray-100 dark:bg-[#0e1117] overflow-auto p-8">
+          <p className="text-xs font-semibold text-gray-400 dark:text-slate-600 uppercase text-center mb-6">Live Preview</p>
           <div className="max-w-md mx-auto rounded-2xl shadow-lg overflow-hidden"
             style={{ backgroundColor: settings.bgColor, fontFamily: settings.fontFamily }}>
             <div className="p-8">
@@ -421,12 +362,10 @@ export default function FormBuilder({ form }: { form: Form }) {
                         {field.label}
                         {field.required && <span className="text-red-500 ml-1">*</span>}
                       </label>
-
                       {field.type === 'textarea' ? (
                         <textarea placeholder={field.placeholder} rows={3}
                           className="w-full border border-gray-200 px-3 py-2 text-sm text-gray-400"
-                          style={{ borderRadius: settings.borderRadius }}
-                          readOnly />
+                          style={{ borderRadius: settings.borderRadius }} readOnly />
                       ) : field.type === 'select' ? (
                         <select className="w-full border border-gray-200 px-3 py-2 text-sm text-gray-400"
                           style={{ borderRadius: settings.borderRadius }}>
@@ -452,8 +391,7 @@ export default function FormBuilder({ form }: { form: Form }) {
                       ) : (
                         <input type={field.type} placeholder={field.placeholder}
                           className="w-full border border-gray-200 px-3 py-2 text-sm text-gray-400"
-                          style={{ borderRadius: settings.borderRadius }}
-                          readOnly />
+                          style={{ borderRadius: settings.borderRadius }} readOnly />
                       )}
                     </div>
                   ))}

@@ -14,41 +14,38 @@ export default function FormActions({ formId, isActive }: { formId: string; isAc
   const toggleActive = async () => {
     setLoading(true)
     await (supabase.from('forms') as any).update({ is_active: !isActive }).eq('id', formId)
-    router.refresh()
-    setLoading(false)
+    router.refresh(); setLoading(false)
   }
 
   const deleteForm = async () => {
     if (!confirm('Delete this form? All leads will also be deleted.')) return
     setLoading(true)
     await supabase.from('forms' as any).delete().eq('id', formId)
-    router.refresh()
-    setLoading(false)
+    router.refresh(); setLoading(false)
   }
 
   const copyEmbed = () => {
     const code = `<script src="${window.location.origin}/embed.js" data-form-id="${formId}"></script>`
     navigator.clipboard.writeText(code)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    setCopied(true); setTimeout(() => setCopied(false), 2000)
   }
+
+  const btnBase = "text-xs px-3 py-1.5 rounded-lg border transition font-medium"
+  const btnDefault = `${btnBase} border-gray-200 dark:border-white/10 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-white/5`
+  const btnDanger = `${btnBase} border-red-100 dark:border-red-500/20 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10`
 
   return (
     <div className="flex items-center gap-2 ml-4">
-      <button onClick={copyEmbed}
-        className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition font-medium">
+      <button onClick={copyEmbed} className={btnDefault}>
         {copied ? '✅ Copied!' : '📋 Embed'}
       </button>
-      <Link href={`/dashboard/forms/${formId}/edit`}
-        className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition font-medium">
+      <Link href={`/dashboard/forms/${formId}/edit`} className={btnDefault}>
         ✏️ Edit
       </Link>
-      <button onClick={toggleActive} disabled={loading}
-        className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition font-medium disabled:opacity-50">
+      <button onClick={toggleActive} disabled={loading} className={`${btnDefault} disabled:opacity-50`}>
         {isActive ? '⏸ Pause' : '▶ Activate'}
       </button>
-      <button onClick={deleteForm} disabled={loading}
-        className="text-xs px-3 py-1.5 rounded-lg border border-red-100 text-red-500 hover:bg-red-50 transition font-medium disabled:opacity-50">
+      <button onClick={deleteForm} disabled={loading} className={`${btnDanger} disabled:opacity-50`}>
         🗑 Delete
       </button>
     </div>
