@@ -64,7 +64,7 @@ export default async function DashboardPage() {
               <div className="flex gap-3 flex-wrap">
                 <Link
                   href="/dashboard/forms/new"
-                  className="bg-white text-blue-600 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-50 transition"
+                  className="bg-white hover:bg-blue-50 text-blue-600 px-4 py-2 rounded-xl text-sm font-semibold transition"
                 >
                   Create First Form →
                 </Link>
@@ -116,7 +116,7 @@ export default async function DashboardPage() {
                     style={{
                       height: `${(day.count / maxCount) * 100}%`,
                       minHeight: day.count > 0 ? '4px' : '2px',
-                      backgroundColor: day.count > 0 ? '#3b82f6' : '#e5e7eb'
+                      backgroundColor: day.count > 0 ? '#3b82f6' : 'var(--color-border, #e5e7eb)'
                     }}
                   />
                   <span className="text-xs text-gray-400 dark:text-slate-600 text-center leading-tight">{day.label}</span>

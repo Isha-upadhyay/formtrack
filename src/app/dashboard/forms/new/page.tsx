@@ -134,17 +134,17 @@ export default function NewFormPage() {
   return (
     <div className="p-8 max-w-5xl">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Create New Form</h1>
-        <p className="text-gray-500 text-sm mt-1">Choose a template to get started quickly</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Create New Form</h1>
+        <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">Choose a template to get started quickly</p>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Form Name</label>
+      <div className="bg-white dark:bg-[#1c2128] rounded-2xl border border-gray-100 dark:border-white/8 shadow-sm p-5 mb-6">
+        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Form Name</label>
         <input
           type="text"
           value={formName}
           onChange={(e) => setFormName(e.target.value)}
-          className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500/50 transition"
           placeholder="e.g. Website Contact Form, Google Ads Lead Form..."
         />
       </div>
@@ -156,21 +156,21 @@ export default function NewFormPage() {
             onClick={() => setSelected(template.id)}
             className={`p-5 rounded-xl border-2 text-left transition ${
               selected === template.id
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-100 bg-white hover:border-gray-200 shadow-sm'
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/15'
+                : 'border-gray-100 dark:border-white/8 bg-white dark:bg-[#1c2128] hover:border-gray-200 dark:hover:border-white/15 shadow-sm'
             }`}
           >
             <div className="text-3xl mb-3">{template.icon}</div>
-            <h3 className="font-semibold text-gray-900 text-sm mb-1">{template.name}</h3>
-            <p className="text-xs text-gray-500">{template.description}</p>
+            <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">{template.name}</h3>
+            <p className="text-xs text-gray-500 dark:text-slate-400">{template.description}</p>
           </button>
         ))}
       </div>
 
       {/* Fix #6: Show plan limit error */}
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between">
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="mb-4 p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl flex items-center justify-between">
+          <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
           <a href="/dashboard/billing" className="text-sm font-semibold text-blue-600 hover:underline ml-4 whitespace-nowrap">
             Upgrade to Pro →
           </a>
@@ -185,7 +185,7 @@ export default function NewFormPage() {
         >
           {loading ? 'Creating...' : 'Create Form →'}
         </button>
-        <button onClick={() => router.back()} className="text-gray-500 hover:text-gray-700 text-sm">
+        <button onClick={() => router.back()} className="text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 text-sm">
           Cancel
         </button>
       </div>

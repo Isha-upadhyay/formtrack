@@ -45,59 +45,59 @@ export default function ResetPasswordPage() {
 
   if (done) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-md text-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0e1117]">
+        <div className="bg-white dark:bg-[#161b22] border border-gray-100 dark:border-white/8 p-8 rounded-2xl shadow-xl dark:shadow-black/40 w-full max-w-md text-center">
           <div className="text-5xl mb-4">✅</div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Password updated!</h2>
-          <p className="text-gray-500 text-sm">Redirecting to dashboard...</p>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Password updated!</h2>
+          <p className="text-gray-500 dark:text-slate-400 text-sm">Redirecting to dashboard...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0e1117]">
+      <div className="bg-white dark:bg-[#161b22] border border-gray-100 dark:border-white/8 p-8 rounded-2xl shadow-xl dark:shadow-black/40 w-full max-w-md">
         <div className="flex items-center gap-2 mb-6">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">F</div>
-          <span className="font-bold text-gray-900 text-lg">FormTrack</span>
+          <span className="font-bold text-gray-900 dark:text-white text-lg">FormTrack</span>
         </div>
 
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Set new password</h1>
-        <p className="text-gray-500 text-sm mb-6">Choose a strong password for your account.</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Set new password</h1>
+        <p className="text-gray-500 dark:text-slate-400 text-sm mb-6">Choose a strong password for your account.</p>
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">⚠️ {error}</div>
+          <div className="bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-500/20 p-3 rounded-xl mb-4 text-sm">⚠️ {error}</div>
         )}
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">New Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleReset()}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500/50 transition"
               placeholder="Min. 6 characters"
               autoFocus
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Confirm Password</label>
             <input
               type="password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleReset()}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500/50 transition"
               placeholder="Re-enter password"
             />
           </div>
           <button
             onClick={handleReset}
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-medium disabled:opacity-50 transition shadow-sm shadow-blue-500/20"
           >
             {loading ? 'Updating...' : 'Update Password'}
           </button>

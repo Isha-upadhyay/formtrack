@@ -15,7 +15,7 @@ export default async function PublicFormPage({ params }: { params: Promise<{ for
   if (!form) notFound()
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0e1117] flex items-center justify-center p-4">
       <PublicForm form={form} />
     </div>
   )

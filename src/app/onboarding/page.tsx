@@ -40,26 +40,26 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full max-w-lg p-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0e1117] flex items-center justify-center p-6">
+      <div className="bg-white dark:bg-[#161b22] rounded-2xl shadow-sm border border-gray-100 dark:border-white/8 w-full max-w-lg p-8">
         {/* Header */}
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold">F</div>
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl shadow-sm shadow-blue-500/30 flex items-center justify-center text-white font-bold">F</div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Welcome to FormTrack! 🎉</h1>
-            <p className="text-sm text-gray-500">Let's get you set up in 5 minutes</p>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Welcome to FormTrack! 🎉</h1>
+            <p className="text-sm text-gray-500 dark:text-slate-400">Let's get you set up in 5 minutes</p>
           </div>
         </div>
 
         {/* Progress bar */}
         <div className="mt-6 mb-8">
-          <div className="flex justify-between text-xs text-gray-500 mb-2">
+          <div className="flex justify-between text-xs text-gray-500 dark:text-slate-400 mb-2">
             <span>{completed.length} of {steps.length} done</span>
             <span>{Math.round((completed.length / steps.length) * 100)}%</span>
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-2">
+          <div className="w-full bg-gray-100 dark:bg-white/8 rounded-full h-2">
             <div
-              className="h-2 rounded-full bg-blue-500 transition-all duration-500"
+              className="h-2 rounded-full bg-blue-500 dark:bg-blue-400 transition-all duration-500"
               style={{ width: `${(completed.length / steps.length) * 100}%` }}
             />
           </div>
@@ -73,7 +73,7 @@ export default function OnboardingPage() {
               <div
                 key={step.id}
                 className={`flex items-start gap-4 p-4 rounded-xl border-2 transition-all ${
-                  done ? 'border-green-200 bg-green-50' : 'border-gray-100 hover:border-blue-200'
+                  done ? 'border-green-200 dark:border-green-500/30 bg-green-50 dark:bg-green-500/10' : 'border-gray-100 dark:border-white/8 hover:border-blue-200 dark:hover:border-blue-500/40'
                 }`}
               >
                 {/* Checkbox */}
@@ -81,8 +81,8 @@ export default function OnboardingPage() {
                   onClick={() => toggle(step.id)}
                   className={`mt-0.5 w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                     done
-                      ? 'bg-green-500 border-green-500 text-white'
-                      : 'border-gray-300 hover:border-blue-400'
+                      ? 'bg-green-500 dark:bg-green-600 border-green-500 dark:border-green-600 text-white'
+                      : 'border-gray-300 dark:border-white/20 hover:border-blue-400'
                   }`}
                 >
                   {done && <span className="text-xs font-bold">✓</span>}
@@ -91,17 +91,17 @@ export default function OnboardingPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span>{step.icon}</span>
-                    <p className={`font-semibold text-sm ${done ? 'text-green-700 line-through opacity-60' : 'text-gray-900'}`}>
+                    <p className={`font-semibold text-sm ${done ? 'text-green-700 dark:text-green-400 line-through opacity-60' : 'text-gray-900 dark:text-white'}`}>
                       {step.title}
                     </p>
                   </div>
-                  <p className="text-xs text-gray-500">{step.desc}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">{step.desc}</p>
                 </div>
 
                 {!done && (
                   <Link
                     href={step.href}
-                    className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition whitespace-nowrap flex-shrink-0"
+                    className="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/15 px-3 py-1.5 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-500/25 transition whitespace-nowrap flex-shrink-0"
                   >
                     {step.action} →
                   </Link>
@@ -115,7 +115,7 @@ export default function OnboardingPage() {
         {completed.length === steps.length ? (
           <div className="text-center">
             <div className="text-4xl mb-3">🎊</div>
-            <p className="font-bold text-gray-900 mb-4">You're all set!</p>
+            <p className="font-bold text-gray-900 dark:text-white mb-4">You're all set!</p>
             <button
               onClick={() => router.push('/dashboard')}
               className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition"
@@ -126,7 +126,7 @@ export default function OnboardingPage() {
         ) : (
           <button
             onClick={() => router.push('/dashboard')}
-            className="w-full text-center text-gray-400 text-sm hover:text-gray-600 transition"
+            className="w-full text-center text-gray-400 dark:text-slate-500 text-sm hover:text-gray-600 dark:hover:text-slate-300 transition"
           >
             Skip for now → Go to dashboard
           </button>

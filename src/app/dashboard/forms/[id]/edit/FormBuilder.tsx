@@ -351,31 +351,31 @@ export default function FormBuilder({ form }: { form: Form }) {
           <div className="max-w-md mx-auto rounded-2xl shadow-lg overflow-hidden"
             style={{ backgroundColor: settings.bgColor, fontFamily: settings.fontFamily }}>
             <div className="p-8">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">{name}</h2>
+              <h2 className="text-xl font-bold mb-6" style={{color: '#111827'}}>{name}</h2>
               {fields.length === 0 ? (
-                <p className="text-gray-400 text-sm text-center py-8">Add fields from the left panel</p>
+                <p className="text-sm text-center py-8" style={{color: '#9ca3af'}}>Add fields from the left panel</p>
               ) : (
                 <div className="space-y-4">
                   {fields.map((field) => (
                     <div key={field.id}>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium mb-1" style={{color: '#374151'}}>
                         {field.label}
                         {field.required && <span className="text-red-500 ml-1">*</span>}
                       </label>
                       {field.type === 'textarea' ? (
                         <textarea placeholder={field.placeholder} rows={3}
-                          className="w-full border border-gray-200 px-3 py-2 text-sm text-gray-400"
-                          style={{ borderRadius: settings.borderRadius }} readOnly />
+                          className="w-full border px-3 py-2 text-sm"
+                          style={{ borderRadius: settings.borderRadius, borderColor: '#e5e7eb', color: '#9ca3af', backgroundColor: 'rgba(255,255,255,0.8)' }} readOnly />
                       ) : field.type === 'select' ? (
-                        <select className="w-full border border-gray-200 px-3 py-2 text-sm text-gray-400"
-                          style={{ borderRadius: settings.borderRadius }}>
+                        <select className="w-full border px-3 py-2 text-sm"
+                          style={{ borderRadius: settings.borderRadius, borderColor: '#e5e7eb', color: '#6b7280', backgroundColor: 'rgba(255,255,255,0.8)' }}>
                           <option>Select an option</option>
                           {field.options?.map(opt => <option key={opt}>{opt}</option>)}
                         </select>
                       ) : field.type === 'radio' ? (
                         <div className="space-y-2">
                           {field.options?.map(opt => (
-                            <label key={opt} className="flex items-center gap-2 text-sm text-gray-600">
+                            <label key={opt} className="flex items-center gap-2 text-sm" style={{color: '#4b5563'}}>
                               <input type="radio" readOnly /> {opt}
                             </label>
                           ))}
@@ -383,15 +383,15 @@ export default function FormBuilder({ form }: { form: Form }) {
                       ) : field.type === 'checkbox' ? (
                         <div className="space-y-2">
                           {field.options?.map(opt => (
-                            <label key={opt} className="flex items-center gap-2 text-sm text-gray-600">
+                            <label key={opt} className="flex items-center gap-2 text-sm" style={{color: '#4b5563'}}>
                               <input type="checkbox" readOnly /> {opt}
                             </label>
                           ))}
                         </div>
                       ) : (
                         <input type={field.type} placeholder={field.placeholder}
-                          className="w-full border border-gray-200 px-3 py-2 text-sm text-gray-400"
-                          style={{ borderRadius: settings.borderRadius }} readOnly />
+                          className="w-full border px-3 py-2 text-sm"
+                          style={{ borderRadius: settings.borderRadius, borderColor: '#e5e7eb', color: '#9ca3af', backgroundColor: 'rgba(255,255,255,0.8)' }} readOnly />
                       )}
                     </div>
                   ))}

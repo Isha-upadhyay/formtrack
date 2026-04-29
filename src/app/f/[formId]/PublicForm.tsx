@@ -3,29 +3,16 @@
 import { useState, useEffect } from 'react'
 
 interface Field {
-  id: string
-  type: string
-  label: string
-  placeholder?: string
-  required: boolean
-  options?: string[]
+  id: string; type: string; label: string; placeholder?: string; required: boolean; options?: string[]
 }
 
 interface FormSettings {
-  submitLabel: string
-  successMessage: string
-  bgColor: string
-  accentColor: string
-  fontFamily: string
-  borderRadius: string
+  submitLabel: string; successMessage: string; bgColor: string; accentColor: string
+  fontFamily: string; borderRadius: string
 }
 
 interface Form {
-  id: string
-  name: string
-  description?: string
-  fields: Field[]
-  settings: FormSettings
+  id: string; name: string; description?: string; fields: Field[]; settings: FormSettings
 }
 
 export default function PublicForm({ form }: { form: Form }) {
@@ -35,8 +22,6 @@ export default function PublicForm({ form }: { form: Form }) {
   const [submitted, setSubmitted] = useState(false)
   const [sourceParams, setSourceParams] = useState<Record<string, string>>({})
 
-  // Capture UTM params — read from URL first, then fallback to cookies
-  // This ensures UTMs survive multi-page journeys (ad click → browse → submit)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']
@@ -64,14 +49,9 @@ export default function PublicForm({ form }: { form: Form }) {
   const validate = () => {
     const newErrors: Record<string, string> = {}
     form.fields.forEach(field => {
-      if (field.required && !values[field.id]?.trim()) {
-        newErrors[field.id] = `${field.label} is required`
-      }
+      if (field.required && !values[field.id]?.trim()) newErrors[field.id] = `${field.label} is required`
       if (field.type === 'email' && values[field.id]) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-        if (!emailRegex.test(values[field.id])) {
-          newErrors[field.id] = 'Please enter a valid email'
-        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values[field.id])) newErrors[field.id] = 'Please enter a valid email'
       }
     })
     setErrors(newErrors)
@@ -81,39 +61,33 @@ export default function PublicForm({ form }: { form: Form }) {
   const handleSubmit = async () => {
     if (!validate()) return
     setSubmitting(true)
-
     try {
       const res = await fetch('/api/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          form_id: form.id,
-          data: values,
-          ...sourceParams,
-        }),
+        body: JSON.stringify({ form_id: form.id, data: values, ...sourceParams }),
       })
-
-      if (res.ok) {
-        setSubmitted(true)
-      } else {
-        alert('Something went wrong. Please try again.')
-      }
+      if (res.ok) setSubmitted(true)
+      else alert('Something went wrong. Please try again.')
     } catch {
       alert('Network error. Please try again.')
     }
-
     setSubmitting(false)
   }
 
   const s = form.settings
+
+  // Shared input style — these are user-facing forms with custom bgColor,
+  // so we use inline style for bg and just ensure text is always readable
+  const inputBase = "w-full border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 transition text-gray-800 bg-white/80 placeholder-gray-400"
 
   if (submitted) {
     return (
       <div className="max-w-md w-full rounded-2xl shadow-lg p-10 text-center"
         style={{ backgroundColor: s.bgColor, fontFamily: s.fontFamily }}>
         <div className="text-5xl mb-4">✅</div>
-        <h2 className="text-xl font-bold text-gray-900 mb-2">Thank you!</h2>
-        <p className="text-gray-600">{s.successMessage}</p>
+        <h2 className="text-xl font-bold mb-2" style={{ color: '#111827' }}>Thank you!</h2>
+        <p style={{ color: '#4b5563' }}>{s.successMessage}</p>
       </div>
     )
   }
@@ -122,17 +96,17 @@ export default function PublicForm({ form }: { form: Form }) {
     <div className="max-w-md w-full rounded-2xl shadow-lg overflow-hidden"
       style={{ backgroundColor: s.bgColor, fontFamily: s.fontFamily }}>
       <div className="p-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">{form.name}</h1>
+        <h1 className="text-2xl font-bold mb-2" style={{ color: '#111827' }}>{form.name}</h1>
         {form.description && (
-          <p className="text-gray-500 text-sm mb-6">{form.description}</p>
+          <p className="text-sm mb-6" style={{ color: '#6b7280' }}>{form.description}</p>
         )}
 
         <div className="space-y-4 mt-6">
           {form.fields.map((field) => (
             <div key={field.id}>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium mb-1" style={{ color: '#374151' }}>
                 {field.label}
-                {field.required && <span className="text-red-500 ml-1">*</span>}
+                {field.required && <span style={{ color: '#ef4444' }} className="ml-1">*</span>}
               </label>
 
               {field.type === 'textarea' ? (
@@ -141,18 +115,14 @@ export default function PublicForm({ form }: { form: Form }) {
                   value={values[field.id] || ''}
                   onChange={(e) => setValues({ ...values, [field.id]: e.target.value })}
                   rows={4}
-                  className="w-full border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 transition"
-                  style={{
-                    borderRadius: s.borderRadius,
-                    // @ts-expect-error css var
-                    '--tw-ring-color': s.accentColor
-                  }}
+                  className={inputBase}
+                  style={{ borderRadius: s.borderRadius }}
                 />
               ) : field.type === 'select' ? (
                 <select
                   value={values[field.id] || ''}
                   onChange={(e) => setValues({ ...values, [field.id]: e.target.value })}
-                  className="w-full border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 transition bg-white"
+                  className={`${inputBase} cursor-pointer`}
                   style={{ borderRadius: s.borderRadius }}>
                   <option value="">Select an option</option>
                   {field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -160,7 +130,7 @@ export default function PublicForm({ form }: { form: Form }) {
               ) : field.type === 'radio' ? (
                 <div className="space-y-2">
                   {field.options?.map(opt => (
-                    <label key={opt} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: '#374151' }}>
                       <input type="radio" name={field.id} value={opt}
                         checked={values[field.id] === opt}
                         onChange={() => setValues({ ...values, [field.id]: opt })} />
@@ -173,13 +143,11 @@ export default function PublicForm({ form }: { form: Form }) {
                   {field.options?.map(opt => {
                     const checked = values[field.id]?.split(',').includes(opt) || false
                     return (
-                      <label key={opt} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                      <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: '#374151' }}>
                         <input type="checkbox" checked={checked}
                           onChange={() => {
                             const current = values[field.id]?.split(',').filter(Boolean) || []
-                            const updated = checked
-                              ? current.filter(v => v !== opt)
-                              : [...current, opt]
+                            const updated = checked ? current.filter(v => v !== opt) : [...current, opt]
                             setValues({ ...values, [field.id]: updated.join(',') })
                           }} />
                         {opt}
@@ -193,7 +161,7 @@ export default function PublicForm({ form }: { form: Form }) {
                   placeholder={field.placeholder}
                   value={values[field.id] || ''}
                   onChange={(e) => setValues({ ...values, [field.id]: e.target.value })}
-                  className="w-full border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 transition"
+                  className={inputBase}
                   style={{ borderRadius: s.borderRadius }}
                 />
               )}
@@ -208,15 +176,12 @@ export default function PublicForm({ form }: { form: Form }) {
             onClick={handleSubmit}
             disabled={submitting}
             className="w-full py-3 text-white font-semibold text-sm disabled:opacity-60 transition mt-2"
-            style={{
-              backgroundColor: s.accentColor,
-              borderRadius: s.borderRadius,
-            }}>
+            style={{ backgroundColor: s.accentColor, borderRadius: s.borderRadius }}>
             {submitting ? 'Submitting...' : s.submitLabel}
           </button>
         </div>
 
-        <p className="text-center text-xs text-gray-300 mt-6">Powered by FormTrack</p>
+        <p className="text-center text-xs mt-6" style={{ color: '#d1d5db' }}>Powered by FormTrack</p>
       </div>
     </div>
   )
