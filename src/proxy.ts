@@ -1,8 +1,20 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
+function isPublicPath(pathname: string): boolean {
+  return (
+    pathname === '/' ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/signup') ||
+    pathname.startsWith('/reset-password') ||
+    pathname.startsWith('/f/') ||
+    pathname.startsWith('/api/leads')
+  )
+}
+
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
+  const pathname = request.nextUrl.pathname
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,9 +25,7 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          )
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
@@ -26,26 +36,26 @@ export async function middleware(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
+  const isApiRoute = pathname.startsWith('/api/')
+  const isDashboardRoute = pathname.startsWith('/dashboard')
+  const isPublic = isPublicPath(pathname)
 
-  const { pathname } = request.nextUrl
+  if (!user && isApiRoute && !isPublic) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
-  // Public routes — allow always
-  const isPublicRoute =
-    pathname.startsWith('/login') ||
-    pathname.startsWith('/signup') ||
-    pathname.startsWith('/f/') ||
-    pathname.startsWith('/api/leads') ||
-    pathname.startsWith('/api/forms') ||
-    pathname === '/'
-
-  // Protected routes — redirect to login if not logged in
-  if (!user && !isPublicRoute) {
+  if (!user && isDashboardRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  // Already logged in — redirect away from login/signup
+  if (!user && !isPublic && !isApiRoute && !isDashboardRoute) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
+  }
+
   if (user && (pathname.startsWith('/login') || pathname.startsWith('/signup'))) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'

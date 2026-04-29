@@ -1,13 +1,14 @@
 import Razorpay from 'razorpay'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET } from '@/lib/env'
 
 
-export async function POST() {
+export async function POST(request: Request) {
 
   const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
+  key_id: RAZORPAY_KEY_ID,
+  key_secret: RAZORPAY_KEY_SECRET,
 })
   try {
     const supabase = await createClient()
@@ -17,14 +18,30 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { data: profile, error: profileError } = await (supabase.from('profiles') as any)
+      .select('org_id')
+      .eq('id', user.id)
+      .single()
+    if (profileError || !profile?.org_id) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+    }
+
     const order = await razorpay.orders.create({
       amount: 99900, // ₹999 in paise
       currency: 'INR',
       receipt: `rcpt_${Date.now()}`,
       notes: {
         user_id: user.id,
+        org_id: profile.org_id,
         plan: 'pro',
       },
+    })
+
+    console.info('Razorpay order created', {
+      order_id: order.id,
+      user_id: user.id,
+      org_id: profile.org_id,
+      created_at: new Date().toISOString(),
     })
 
     return NextResponse.json(order)

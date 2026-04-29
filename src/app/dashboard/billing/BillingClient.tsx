@@ -1,12 +1,21 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { PLAN_LIMITS } from '@/types'
 
-interface Subscription { plan: string; status: string }
+interface OrgBilling {
+  plan: string
+  plan_expires_at: string | null
+  leads_used_this_month: number
+}
 
-export default function BillingClient({ subscription }: { subscription: Subscription | null }) {
+export default function BillingClient({ org }: { org: OrgBilling | null }) {
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const isPro = subscription?.plan === 'pro' && subscription?.status === 'active'
+  const expiresAtMs = org?.plan_expires_at ? new Date(org.plan_expires_at).getTime() : NaN
+  const isPro = org?.plan === 'pro' && Number.isFinite(expiresAtMs) && expiresAtMs > Date.now()
+  const leadsLimit = isPro ? Infinity : PLAN_LIMITS.free.leads
 
   const handleUpgrade = async () => {
     setLoading(true)
@@ -27,7 +36,10 @@ export default function BillingClient({ subscription }: { subscription: Subscrip
               method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(response),
             })
             const verifyData = await verifyRes.json()
-            if (verifyData.success) { alert('🎉 Payment successful! You are now on Pro plan.'); window.location.reload() }
+            if (verifyData.success) {
+              alert('🎉 Payment successful! You are now on Pro plan.')
+              router.refresh()
+            }
             else alert('Payment verification failed. Contact support.')
           },
           prefill: { name: '', email: '' },
@@ -57,6 +69,21 @@ export default function BillingClient({ subscription }: { subscription: Subscrip
           <span className="text-gray-500 dark:text-slate-400 text-sm">
             {isPro ? 'All features unlocked' : 'Limited to 2 forms, 100 leads/month'}
           </span>
+        </div>
+        <div className="mt-3 space-y-1 text-sm text-gray-500 dark:text-slate-400">
+          <p>
+            Leads used this month: <span className="font-semibold text-gray-700 dark:text-slate-300">{org?.leads_used_this_month ?? 0}</span>
+            {' / '}
+            <span className="font-semibold text-gray-700 dark:text-slate-300">{leadsLimit === Infinity ? 'Unlimited' : leadsLimit}</span>
+          </p>
+          {isPro && org?.plan_expires_at ? (
+            <p>
+              Pro valid until{' '}
+              <span className="font-semibold text-gray-700 dark:text-slate-300">
+                {new Date(org.plan_expires_at).toLocaleDateString()}
+              </span>
+            </p>
+          ) : null}
         </div>
       </div>
 

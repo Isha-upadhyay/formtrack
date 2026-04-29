@@ -1,52 +1,52 @@
-/**
- * Check whether the current org can create more forms/leads.
- * Call this from server components or API routes.
- */
-import { createClient } from '@/lib/supabase/server'
 import { PLAN_LIMITS } from '@/types'
 
-type DB = Awaited<ReturnType<typeof createClient>>
-
-async function getSubForOrg(db: DB, orgId: string) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (db as any)
-    .from('subscriptions')
-    .select('plan, status')
-    .eq('org_id', orgId)
-    .maybeSingle() as Promise<{
-      data: { plan: string; status: string } | null
-    }>
+type OrgPlanState = {
+  plan: string | null
+  plan_expires_at?: string | null
 }
 
-async function getFormCount(db: DB, orgId: string) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (db as any)
-    .from('forms')
-    .select('*', { count: 'exact', head: true })
-    .eq('org_id', orgId) as Promise<{ count: number | null }>
+function hasActivePro(org: OrgPlanState | null | undefined): boolean {
+  if (!org || org.plan !== 'pro' || !org.plan_expires_at) return false
+  const expiresAtMs = new Date(org.plan_expires_at).getTime()
+  if (Number.isNaN(expiresAtMs)) return false
+  return expiresAtMs > Date.now()
 }
 
-export async function getOrgPlan(orgId: string): Promise<'free' | 'pro'> {
-  const supabase = await createClient()
-  const { data: sub } = await getSubForOrg(supabase, orgId)
-  return sub?.status === 'active' && sub?.plan === 'pro' ? 'pro' : 'free'
+export function isPro(org: OrgPlanState | null | undefined): boolean {
+  return hasActivePro(org)
 }
 
-export async function canCreateForm(
-  orgId: string
-): Promise<{ allowed: boolean; reason?: string }> {
-  const supabase = await createClient()
-  const plan = await getOrgPlan(orgId)
-  const limit = PLAN_LIMITS[plan].forms
+export function canCreateForm(
+  org: OrgPlanState | null | undefined,
+  currentFormCount: number
+): { allowed: boolean; reason?: string } {
+  if (isPro(org)) return { allowed: true }
 
-  if (limit === Infinity) return { allowed: true }
+  const limit = PLAN_LIMITS.free.forms
 
-  const { count } = await getFormCount(supabase, orgId)
-  if ((count ?? 0) >= limit) {
+  if (currentFormCount >= limit) {
     return {
       allowed: false,
       reason: `Free plan allows ${limit} forms. Upgrade to Pro for unlimited.`,
     }
   }
+
+  return { allowed: true }
+}
+
+export function canCaptureLead(
+  org: OrgPlanState | null | undefined,
+  monthlyLeadCount: number
+): { allowed: boolean; reason?: string } {
+  if (isPro(org)) return { allowed: true }
+
+  const limit = PLAN_LIMITS.free.leads
+  if (monthlyLeadCount >= limit) {
+    return {
+      allowed: false,
+      reason: `Free plan allows ${limit} leads/month. Upgrade to Pro for unlimited.`,
+    }
+  }
+
   return { allowed: true }
 }
