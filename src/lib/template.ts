@@ -15,8 +15,10 @@ const defaultSettings: FormSettings = {
   bgColor: '#ffffff',
   accentColor: '#2563eb',
   fontFamily: 'Inter, sans-serif',
-  borderRadius: '8px',
+  borderRadius: '16px',
   autoReplyEnabled: false,
+  autoReplySubject: 'Thanks for reaching out!',
+  autoReplyMessage: 'Hi,\n\nWe have received your submission and will get back to you shortly.',
 }
 
 export const FORM_TEMPLATES: FormTemplate[] = [
