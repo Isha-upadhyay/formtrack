@@ -3,6 +3,18 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { PLAN_LIMITS } from '@/types'
+import { 
+  Check, 
+  Zap, 
+  Shield, 
+  TrendingUp, 
+  BarChart2, 
+  Sparkles, 
+  Loader2,
+  Calendar,
+  CreditCard,
+  Crown
+} from 'lucide-react'
 
 interface OrgBilling {
   plan: string
@@ -16,6 +28,7 @@ export default function BillingClient({ org }: { org: OrgBilling | null }) {
   const expiresAtMs = org?.plan_expires_at ? new Date(org.plan_expires_at).getTime() : NaN
   const isPro = org?.plan === 'pro' && Number.isFinite(expiresAtMs) && expiresAtMs > Date.now()
   const leadsLimit = isPro ? Infinity : PLAN_LIMITS.free.leads
+  const usagePercent = leadsLimit === Infinity ? 0 : Math.min(((org?.leads_used_this_month ?? 0) / leadsLimit) * 100, 100)
 
   const handleUpgrade = async () => {
     setLoading(true)
@@ -52,90 +65,128 @@ export default function BillingClient({ org }: { org: OrgBilling | null }) {
     } catch { alert('Something went wrong'); setLoading(false) }
   }
 
-  const cardClass = "bg-white dark:bg-[#1c2128] rounded-2xl border border-gray-100 dark:border-white/8 shadow-sm p-6"
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-10 animate-in fade-in duration-700">
+      {/* Premium Usage Dashboard */}
+      <div className="glass-card p-10 rounded-[3rem] relative overflow-hidden group">
+         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 blur-[100px] rounded-full -mr-20 -mt-20 group-hover:scale-150 transition-transform duration-1000" />
+         
+         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+            <div className="space-y-4">
+               <div className="flex items-center gap-3">
+                  <div className={`p-2.5 rounded-2xl ${isPro ? 'bg-amber-500/10 text-amber-600' : 'bg-blue-600/10 text-blue-600'}`}>
+                     {isPro ? <Crown className="w-5 h-5" /> : <CreditCard className="w-5 h-5" />}
+                  </div>
+                  <h2 className="text-xl font-bold font-syne">Subscription Status</h2>
+               </div>
+               
+               <div className="flex items-center gap-3">
+                  <span className={`text-3xl font-black tracking-tighter font-syne ${isPro ? 'text-amber-600' : 'text-foreground'}`}>
+                     {isPro ? 'Pro Member' : 'Free Tier'}
+                  </span>
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                    isPro ? 'bg-amber-500/10 text-amber-600' : 'bg-blue-600/10 text-blue-600'
+                  }`}>
+                    {isPro ? 'Lifetime Access' : 'Trial Active'}
+                  </span>
+               </div>
+            </div>
 
-      {/* Current Plan */}
-      <div className={cardClass}>
-        <h2 className="font-semibold text-gray-900 dark:text-white mb-4">Current Plan</h2>
-        <div className="flex items-center gap-3">
-          <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${isPro
-            ? 'bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400'
-            : 'bg-gray-100 dark:bg-white/8 text-gray-600 dark:text-slate-400'}`}>
-            {isPro ? '⚡ Pro' : '🆓 Free'}
-          </span>
-          <span className="text-gray-500 dark:text-slate-400 text-sm">
-            {isPro ? 'All features unlocked' : 'Limited to 2 forms, 100 leads/month'}
-          </span>
-        </div>
-        <div className="mt-3 space-y-1 text-sm text-gray-500 dark:text-slate-400">
-          <p>
-            Leads used this month: <span className="font-semibold text-gray-700 dark:text-slate-300">{org?.leads_used_this_month ?? 0}</span>
-            {' / '}
-            <span className="font-semibold text-gray-700 dark:text-slate-300">{leadsLimit === Infinity ? 'Unlimited' : leadsLimit}</span>
-          </p>
-          {isPro && org?.plan_expires_at ? (
-            <p>
-              Pro valid until{' '}
-              <span className="font-semibold text-gray-700 dark:text-slate-300">
-                {new Date(org.plan_expires_at).toLocaleDateString()}
-              </span>
-            </p>
-          ) : null}
-        </div>
+            <div className="w-full md:w-80 space-y-4">
+               <div className="flex justify-between text-xs font-black uppercase tracking-widest text-muted-foreground">
+                  <span>Usage this month</span>
+                  <span className="text-foreground">{org?.leads_used_this_month ?? 0} / {leadsLimit === Infinity ? '∞' : leadsLimit}</span>
+               </div>
+               <div className="h-2 w-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full transition-all duration-1000 ease-out ${isPro ? 'bg-amber-500' : 'bg-blue-600'}`}
+                    style={{ width: `${usagePercent}%` }}
+                  />
+               </div>
+               <p className="text-[10px] text-muted-foreground font-medium italic">Your cycle resets on the 1st of every month.</p>
+            </div>
+         </div>
       </div>
 
-      {/* Plans */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Plan Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Free Plan */}
-        <div className={`bg-white dark:bg-[#1c2128] rounded-2xl border-2 p-6 shadow-sm transition-all ${!isPro
-          ? 'border-blue-500 dark:border-blue-500'
-          : 'border-gray-100 dark:border-white/8'}`}>
-          <h3 className="font-bold text-gray-900 dark:text-white text-lg mb-1">Free</h3>
-          <p className="text-3xl font-extrabold text-gray-900 dark:text-white mb-4">₹0<span className="text-base font-normal text-gray-400 dark:text-slate-500">/mo</span></p>
-          <ul className="space-y-2 text-sm text-gray-600 dark:text-slate-400 mb-6">
-            {['2 forms', '100 leads/month', 'Basic source tracking', 'Embed on website'].map(f => (
-              <li key={f} className="flex items-center gap-2">
-                <span className="text-green-500">✓</span> {f}
+        <div className={`glass-card p-10 rounded-[3.5rem] border-2 transition-all duration-500 ${!isPro ? 'border-blue-600 shadow-2xl shadow-blue-500/10 scale-[1.02]' : 'border-white/5 opacity-60'}`}>
+          <div className="mb-8">
+            <h3 className="text-lg font-black font-syne mb-2">Basic Tracker</h3>
+            <p className="text-4xl font-black font-syne tracking-tighter">₹0<span className="text-base text-muted-foreground font-bold">/mo</span></p>
+          </div>
+          
+          <ul className="space-y-4 mb-10">
+            {['2 active forms', '100 leads/month', 'Basic UTM mapping', 'Global form hosting'].map(f => (
+              <li key={f} className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
+                <div className="w-5 h-5 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
+                  <Check className="w-3 h-3 text-green-600" />
+                </div>
+                {f}
               </li>
             ))}
           </ul>
-          <div className="w-full text-center py-2.5 rounded-xl border border-gray-200 dark:border-white/10 text-gray-500 dark:text-slate-400 text-sm font-medium">
-            {!isPro ? 'Current Plan' : 'Downgrade'}
+
+          <div className="w-full py-4 bg-gray-50 dark:bg-white/5 text-muted-foreground text-center text-xs font-black uppercase tracking-widest rounded-2xl">
+            {!isPro ? 'Current Plan' : 'Standard Access'}
           </div>
         </div>
 
         {/* Pro Plan */}
-        <div className={`bg-white dark:bg-[#1c2128] rounded-2xl border-2 p-6 shadow-sm relative transition-all ${isPro
-          ? 'border-blue-500 dark:border-blue-500'
-          : 'border-gray-100 dark:border-white/8'}`}>
+        <div className={`glass-card p-10 rounded-[3.5rem] border-2 transition-all duration-500 relative overflow-hidden group ${isPro ? 'border-amber-500 shadow-2xl shadow-amber-500/10 scale-[1.02]' : 'border-white/5'}`}>
           {!isPro && (
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm shadow-blue-500/30">
-              RECOMMENDED
-            </div>
+             <div className="absolute top-8 right-8 rotate-12">
+                <div className="bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg shadow-amber-500/30 animate-float">
+                  Popular
+                </div>
+             </div>
           )}
-          <h3 className="font-bold text-gray-900 dark:text-white text-lg mb-1">Pro</h3>
-          <p className="text-3xl font-extrabold text-gray-900 dark:text-white mb-4">₹999<span className="text-base font-normal text-gray-400 dark:text-slate-500">/mo</span></p>
-          <ul className="space-y-2 text-sm text-gray-600 dark:text-slate-400 mb-6">
-            {['Unlimited forms', 'Unlimited leads', 'Advanced UTM tracking', 'Gmail/Outlook auto-reply', 'CSV export', 'Priority support'].map(f => (
-              <li key={f} className="flex items-center gap-2">
-                <span className="text-green-500">✓</span> {f}
+          
+          <div className="mb-8">
+            <h3 className="text-lg font-black font-syne mb-2">Growth Pro</h3>
+            <p className="text-4xl font-black font-syne tracking-tighter text-amber-600">₹999<span className="text-base text-muted-foreground font-bold">/mo</span></p>
+          </div>
+          
+          <ul className="space-y-4 mb-10">
+            {[
+              'Unlimited active forms', 
+              'Unlimited monthly leads', 
+              'Advanced AI mapping', 
+              'Custom SMTP auto-replies',
+              'CSV/JSON raw data export',
+              'Priority technical support'
+            ].map(f => (
+              <li key={f} className="flex items-center gap-3 text-sm font-bold">
+                <div className="w-5 h-5 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-3 h-3 text-amber-600" />
+                </div>
+                {f}
               </li>
             ))}
           </ul>
+
           {isPro ? (
-            <div className="w-full text-center py-2.5 rounded-xl bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 text-sm font-semibold">
-              ✅ Active
+            <div className="w-full py-4 bg-amber-500/10 text-amber-600 text-center text-xs font-black uppercase tracking-widest rounded-2xl border border-amber-500/20">
+              Active Premium
             </div>
           ) : (
-            <button onClick={handleUpgrade} disabled={loading}
-              className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-50 transition shadow-sm shadow-blue-500/20">
-              {loading ? 'Loading...' : 'Upgrade to Pro — ₹999/mo'}
+            <button 
+              onClick={handleUpgrade} 
+              disabled={loading}
+              className="w-full py-5 bg-foreground text-background font-black text-xs uppercase tracking-widest rounded-2xl transition-all shadow-xl hover:opacity-90 active:scale-95 flex items-center justify-center gap-3"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+              {loading ? 'Processing...' : 'Upgrade to Growth Pro'}
             </button>
           )}
         </div>
+      </div>
+
+      {/* Security Badge */}
+      <div className="flex flex-col items-center gap-4 py-10 opacity-50">
+         <Shield className="w-8 h-8 text-muted-foreground" />
+         <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground">Secure Payments via Razorpay</p>
       </div>
     </div>
   )

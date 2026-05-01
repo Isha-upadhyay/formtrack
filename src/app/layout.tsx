@@ -1,46 +1,52 @@
-import type { Metadata } from 'next'
-import { Syne, DM_Sans } from 'next/font/google'
-import Script from 'next/script'
-import './globals.css'
-import { ThemeProvider } from '@/lib/theme-context'
+import type { Metadata } from "next"
+import { Inter, Plus_Jakarta_Sans } from "next/font/google"
+import "./globals.css"
+import Script from "next/script"
+import { ThemeProvider } from "@/lib/theme-context"
 
-const syne = Syne({
-  subsets: ['latin'],
-  variable: '--font-syne',
-  weight: ['400', '500', '600', '700', '800'],
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
 })
 
-const dmSans = DM_Sans({
-  subsets: ['latin'],
-  variable: '--font-dm-sans',
-  weight: ['300', '400', '500'],
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-syne",
 })
 
 export const metadata: Metadata = {
-  title: 'FormTrack — Know exactly where every lead comes from',
-  description: 'Build embeddable lead forms in minutes. Every submission arrives with a plain-English source explanation. Verify your agency results independently.',
-  keywords: 'lead tracking, UTM tracking, form builder, lead generation, India, digital marketing',
-  openGraph: {
-    title: 'FormTrack — Know where every lead comes from',
-    description: 'Stop trusting your agency blindly. See every lead source in plain English.',
-    type: 'website',
-  },
+  title: "FormTrack | Precision Lead Tracking for Modern Teams",
+  description: "Track every lead source with plain English insights. The ultimate SaaS for marketers and sales teams.",
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode
+}>) {
   return (
-    <html lang="en" className={`${syne.variable} ${dmSans.variable} h-full antialiased`} suppressHydrationWarning>
+    <html lang="en" className={`${inter.variable} ${plusJakarta.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
-        <Script
-          id="theme-switcher"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('formtrack-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark');}}catch(e){}`
-          }}
-        />
+        <Script id="theme-switcher" strategy="beforeInteractive">
+          {`
+            try {
+              var theme = localStorage.getItem('formtrack-theme');
+              var supportDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+              if (theme === 'dark' || (!theme && supportDark)) {
+                document.documentElement.classList.add('dark');
+              } else {
+                document.documentElement.classList.remove('dark');
+              }
+            } catch (e) {}
+          `}
+        </Script>
       </head>
-      <body className="min-h-full flex flex-col bg-[#080A0E]">
-        <ThemeProvider>{children}</ThemeProvider>
+      <body className="h-full selection:bg-blue-500/30 selection:text-blue-900 dark:selection:text-blue-100">
+        <ThemeProvider>
+          <div className="relative flex min-h-screen flex-col">
+            {children}
+          </div>
+        </ThemeProvider>
       </body>
     </html>
   )

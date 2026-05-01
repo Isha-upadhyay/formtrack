@@ -3,10 +3,28 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { 
+  Plus, 
+  Layout, 
+  Mail, 
+  Target, 
+  Monitor, 
+  ChevronRight, 
+  ArrowLeft,
+  Sparkles,
+  Zap,
+  Globe,
+  Settings,
+  Shield,
+  Loader2,
+  FileText,
+  BadgeCent
+} from 'lucide-react'
+import Link from 'next/link'
 
 const TEMPLATES = [
   {
-    id: 'contact', name: 'Contact Us', icon: '📬', description: 'General inquiries form',
+    id: 'contact', name: 'Contact Us', icon: <Mail className="w-6 h-6 text-blue-500" />, description: 'General inquiries form',
     fields: [
       { id: 'name', type: 'text', label: 'Full Name', placeholder: 'John Doe', required: true, step: 1 },
       { id: 'email', type: 'email', label: 'Email Address', placeholder: 'you@example.com', required: true, step: 1 },
@@ -20,11 +38,11 @@ const TEMPLATES = [
       autoReplyEnabled: false,
       autoReplySubject: 'Thanks for contacting us!',
       autoReplyMessage: 'Hi,\n\nWe received your message and will get back to you shortly.',
-      bgColor: '#ffffff', accentColor: '#2563eb', fontFamily: 'Inter, sans-serif', borderRadius: '8px'
+      bgColor: '#ffffff', accentColor: '#2563eb', fontFamily: 'Inter, sans-serif', borderRadius: '16px'
     }
   },
   {
-    id: 'lead-gen', name: 'Lead Gen (2-Step)', icon: '🎯', description: 'Capture leads with steps',
+    id: 'lead-gen', name: 'Lead Gen', icon: <Target className="w-6 h-6 text-amber-500" />, description: 'Capture leads with steps',
     fields: [
       { id: 'name', type: 'text', label: 'Full Name', placeholder: 'Your name', required: true, step: 1 },
       { id: 'company', type: 'text', label: 'Company Name', placeholder: 'Acme Inc.', required: true, step: 1 },
@@ -38,11 +56,11 @@ const TEMPLATES = [
       autoReplyEnabled: false,
       autoReplySubject: 'Your Quote Request',
       autoReplyMessage: 'Hi,\n\nThanks for requesting a quote. Our team is reviewing your details and will call you soon.',
-      bgColor: '#ffffff', accentColor: '#2563eb', fontFamily: 'Inter, sans-serif', borderRadius: '8px'
+      bgColor: '#ffffff', accentColor: '#2563eb', fontFamily: 'Inter, sans-serif', borderRadius: '16px'
     }
   },
   {
-    id: 'demo', name: 'Demo Request', icon: '🖥️', description: 'Book a product demo',
+    id: 'demo', name: 'Demo Request', icon: <Monitor className="w-6 h-6 text-indigo-500" />, description: 'Book a product demo',
     fields: [
       { id: 'name', type: 'text', label: 'Your Name', placeholder: 'Full name', required: true, step: 1 },
       { id: 'email', type: 'email', label: 'Email', placeholder: 'you@company.com', required: true, step: 1 },
@@ -56,79 +74,11 @@ const TEMPLATES = [
       autoReplyEnabled: true,
       autoReplySubject: 'Demo Scheduled!',
       autoReplyMessage: 'Hi,\n\nThanks for your interest. We will send you a calendar invite for the demo shortly.',
-      bgColor: '#ffffff', accentColor: '#2563eb', fontFamily: 'Inter, sans-serif', borderRadius: '8px'
+      bgColor: '#ffffff', accentColor: '#2563eb', fontFamily: 'Inter, sans-serif', borderRadius: '16px'
     }
   },
   {
-    id: 'quote', name: 'Quote Request', icon: '💰', description: 'Get service quote requests',
-    fields: [
-      { id: 'name', type: 'text', label: 'Full Name', placeholder: 'Your name', required: true, step: 1 },
-      { id: 'email', type: 'email', label: 'Email', placeholder: 'you@example.com', required: true, step: 1 },
-      { id: 'service', type: 'select', label: 'Service Required', required: true, options: ['Web Design', 'Mobile App', 'SEO', 'Digital Marketing', 'Other'], step: 1 },
-      { id: 'desc', type: 'textarea', label: 'Project Description', placeholder: 'Tell us about your project', required: true, step: 2 },
-    ],
-    settings: {
-      submitLabel: 'Request Quote',
-      successMessage: 'Custom quote coming within 24 hours!',
-      notificationEmail: '',
-      autoReplyEnabled: false,
-      autoReplySubject: 'Quote Request Received',
-      autoReplyMessage: 'Hi,\n\nWe have received your quote request and are currently processing it.',
-      bgColor: '#ffffff', accentColor: '#2563eb', fontFamily: 'Inter, sans-serif', borderRadius: '8px'
-    }
-  },
-  {
-    id: 'newsletter', name: 'Newsletter', icon: '📧', description: 'Grow your email list',
-    fields: [
-      { id: 'name', type: 'text', label: 'First Name', placeholder: 'Your name', required: true, step: 1 },
-      { id: 'email', type: 'email', label: 'Email Address', placeholder: 'you@example.com', required: true, step: 1 },
-    ],
-    settings: {
-      submitLabel: 'Subscribe',
-      successMessage: 'Subscribed! Check inbox for welcome email.',
-      notificationEmail: '',
-      autoReplyEnabled: true,
-      autoReplySubject: 'Welcome to our Newsletter!',
-      autoReplyMessage: 'Hi,\n\nThanks for subscribing! You will receive our weekly updates from now on.',
-      bgColor: '#ffffff', accentColor: '#2563eb', fontFamily: 'Inter, sans-serif', borderRadius: '8px'
-    }
-  },
-  {
-    id: 'feedback', name: 'Feedback', icon: '⭐', description: 'Collect customer feedback',
-    fields: [
-      { id: 'name', type: 'text', label: 'Name', placeholder: 'Your name', required: false, step: 1 },
-      { id: 'rating', type: 'radio', label: 'Rating', required: true, options: ['1 – Poor', '2 – Fair', '3 – Good', '4 – Very Good', '5 – Excellent'], step: 1 },
-      { id: 'feedback', type: 'textarea', label: 'Your Feedback', placeholder: 'Tell us what you think', required: true, step: 1 },
-    ],
-    settings: {
-      submitLabel: 'Submit Feedback',
-      successMessage: 'Thank you for your feedback!',
-      notificationEmail: '',
-      autoReplyEnabled: false,
-      autoReplySubject: 'Feedback Received',
-      autoReplyMessage: 'Hi,\n\nThank you for taking the time to provide your feedback. We appreciate it!',
-      bgColor: '#ffffff', accentColor: '#2563eb', fontFamily: 'Inter, sans-serif', borderRadius: '8px'
-    }
-  },
-  {
-    id: 'event', name: 'Event Registration', icon: '🎪', description: 'Register event attendees',
-    fields: [
-      { id: 'name', type: 'text', label: 'Full Name', placeholder: 'Your full name', required: true, step: 1 },
-      { id: 'email', type: 'email', label: 'Email', placeholder: 'your@email.com', required: true, step: 1 },
-      { id: 'attendees', type: 'number', label: 'Number of Attendees', placeholder: '1', required: true, step: 1 },
-    ],
-    settings: {
-      submitLabel: 'Register Now',
-      successMessage: 'Registered! Confirmation email on its way.',
-      notificationEmail: '',
-      autoReplyEnabled: true,
-      autoReplySubject: 'Event Registration Confirmed',
-      autoReplyMessage: 'Hi,\n\nYou are successfully registered for the event. See you there!',
-      bgColor: '#ffffff', accentColor: '#2563eb', fontFamily: 'Inter, sans-serif', borderRadius: '8px'
-    }
-  },
-  {
-    id: 'blank', name: 'Blank Form', icon: '✨', description: 'Start from scratch',
+    id: 'blank', name: 'Blank Form', icon: <Plus className="w-6 h-6 text-purple-500" />, description: 'Start from scratch',
     fields: [
       { id: 'name', type: 'text', label: 'Full Name', placeholder: 'Your name', required: true, step: 1 },
       { id: 'email', type: 'email', label: 'Email', placeholder: 'your@email.com', required: true, step: 1 },
@@ -140,7 +90,7 @@ const TEMPLATES = [
       autoReplyEnabled: false,
       autoReplySubject: 'Thanks for reaching out!',
       autoReplyMessage: 'Hi,\n\nWe have received your submission and will get back to you soon.',
-      bgColor: '#ffffff', accentColor: '#2563eb', fontFamily: 'Inter, sans-serif', borderRadius: '8px'
+      bgColor: '#ffffff', accentColor: '#2563eb', fontFamily: 'Inter, sans-serif', borderRadius: '16px'
     }
   },
 ]
@@ -159,67 +109,37 @@ export default function NewFormPage() {
     setError('')
 
     const template = TEMPLATES.find(t => t.id === selected)!
-
-    // Get user first
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setLoading(false); return }
 
-    console.log('Current User ID:', user.id)
+    let { data: profile } = await (supabase.from('profiles') as any).select('org_id').eq('id', user.id).maybeSingle()
 
-    // Get user's org from profiles table
-    let { data: profile, error: profErr } = await (supabase.from('profiles') as any).select('org_id').eq('id', user.id).maybeSingle()
-
-    console.log('Initial Profile Query:', { profile, error: profErr })
-
-    // FALLBACK: If profile is missing, call the onboarding API
     if (!profile) {
-      console.log('Profile missing. Triggering auto-onboarding API...')
       try {
         const onboardRes = await fetch('/api/auth/onboard', { method: 'POST' })
         const onboardData = await onboardRes.json()
-
         if (!onboardData.success) throw new Error(onboardData.error || 'Onboarding failed')
-
-        if (onboardData.org_id) {
-          profile = { org_id: onboardData.org_id }
-        } else {
-          // Fallback re-fetch
-          await new Promise(resolve => setTimeout(resolve, 1000))
-          const { data: newProfile } = await (supabase.from('profiles') as any).select('org_id').eq('id', user.id).maybeSingle()
-          profile = newProfile
-        }
+        profile = { org_id: onboardData.org_id }
       } catch (err) {
-        console.error('Auto-onboarding failed:', err)
         setLoading(false);
-        setError('Database setup incomplete. Please contact support or run SQL migrations.');
+        setError('Database setup incomplete. Please try refreshing.');
         return
       }
     }
 
     if (!profile) {
-      // One last try with a small delay if it was just created
-      await new Promise(resolve => setTimeout(resolve, 500))
-      const { data: lastTry } = await (supabase.from('profiles') as any).select('org_id').eq('id', user.id).maybeSingle()
-      profile = lastTry
-
-      if (!profile) {
-        setLoading(false)
-        setError('Could not verify organization access. Try refreshing the page.')
-        return
-      }
+      setLoading(false)
+      setError('Could not verify organization access. Try refreshing the page.')
+      return
     }
 
-    // Get org details (plan, form count)
-    const { data: org, error: orgErr } = await (supabase.from('orgs') as any).select('plan, leads_used_this_month').eq('id', profile.org_id).maybeSingle()
-
-    // Fallback if RLS blocks reading org details
+    const { data: org } = await (supabase.from('orgs') as any).select('plan').eq('id', profile.org_id).maybeSingle()
     const plan = (org as any)?.plan || 'free'
-    const isPro = plan === 'pro'
 
-    if (!isPro) {
+    if (plan !== 'pro') {
       const { count } = await (supabase.from('forms') as any).select('*', { count: 'exact', head: true }).eq('org_id', profile.org_id)
       if ((count ?? 0) >= 2) {
-        setError('Free plan allows only 2 forms. Please upgrade to Pro for unlimited forms.')
+        setError('Free plan allows only 2 forms. Please upgrade to Pro.')
         setLoading(false)
         return
       }
@@ -235,71 +155,138 @@ export default function NewFormPage() {
 
     if (!insertErr && form) {
       router.push(`/dashboard/forms/${form.id}/edit`)
-    } else if (insertErr) {
-      console.error('Create form error:', insertErr)
+    } else {
       setError('Failed to create form. Please try again.')
     }
     setLoading(false)
   }
 
   return (
-    <div className="p-8 max-w-5xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Create New Form</h1>
-        <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">Choose a template to get started quickly</p>
-      </div>
-
-      <div className="bg-white dark:bg-[#1c2128] rounded-2xl border border-gray-100 dark:border-white/8 shadow-sm p-5 mb-6">
-        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Form Name</label>
-        <input
-          type="text"
-          value={formName}
-          onChange={(e) => setFormName(e.target.value)}
-          className="w-full border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500/50 transition"
-          placeholder="e.g. Website Contact Form, Google Ads Lead Form..."
-        />
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-        {TEMPLATES.map((template) => (
-          <button
-            key={template.id}
-            onClick={() => setSelected(template.id)}
-            className={`p-5 rounded-xl border-2 text-left transition ${selected === template.id
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/15'
-                : 'border-gray-100 dark:border-white/8 bg-white dark:bg-[#1c2128] hover:border-gray-200 dark:hover:border-white/15 shadow-sm'
-              }`}
-          >
-            <div className="text-3xl mb-3">{template.icon}</div>
-            <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">{template.name}</h3>
-            <p className="text-xs text-gray-500 dark:text-slate-400">{template.description}</p>
-          </button>
-        ))}
-      </div>
-
-      {error && (
-        <div className="mb-6 p-5 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">🚀</span>
-            <p className="text-sm font-medium text-red-700 dark:text-red-400">{error}</p>
+    <div className="p-4 md:p-10 max-w-6xl mx-auto space-y-12 animate-in fade-in duration-700">
+      {/* Premium Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 mb-4">
+            <button onClick={() => router.back()} className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-all">
+              <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+            </button>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">New Asset</span>
           </div>
-          <a href="/dashboard/billing" className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl text-xs font-bold transition shadow-sm shadow-red-500/20 whitespace-nowrap">
-            UPGRADE TO PRO
-          </a>
+          <h1 className="text-4xl md:text-5xl font-black tracking-tighter font-syne">Create Form</h1>
+          <p className="text-muted-foreground text-sm md:text-lg max-w-lg font-medium">Select a high-conversion template to launch in seconds.</p>
         </div>
-      )}
+      </div>
 
-      <div className="flex items-center gap-4">
-        <button
-          onClick={handleCreate}
-          disabled={!selected || !formName.trim() || loading}
-          className="bg-blue-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-lg shadow-blue-500/25"
-        >
-          {loading ? 'Creating...' : 'Create Form →'}
-        </button>
-        <button onClick={() => router.back()} className="text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 text-sm font-medium transition">
-          Cancel
-        </button>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+        <div className="lg:col-span-2 space-y-8">
+           {/* Step 1: Name */}
+           <div className="glass-card p-8 rounded-[3rem] space-y-6">
+              <div className="flex items-center gap-4">
+                 <div className="w-10 h-10 bg-blue-600/10 rounded-2xl flex items-center justify-center text-blue-600 font-black text-xs">01</div>
+                 <h2 className="text-xl font-bold font-syne">Form Identity</h2>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Friendly Name</label>
+                <input
+                  type="text"
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  className="w-full bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl py-4 px-6 text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 transition-all font-medium"
+                  placeholder="e.g. Q2 Marketing Lead Capture"
+                />
+              </div>
+           </div>
+
+           {/* Step 2: Template */}
+           <div className="glass-card p-8 rounded-[3rem] space-y-8">
+              <div className="flex items-center gap-4">
+                 <div className="w-10 h-10 bg-blue-600/10 rounded-2xl flex items-center justify-center text-blue-600 font-black text-xs">02</div>
+                 <h2 className="text-xl font-bold font-syne">Select Structure</h2>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {TEMPLATES.map((template) => (
+                  <button
+                    key={template.id}
+                    onClick={() => setSelected(template.id)}
+                    className={`group p-6 rounded-[2rem] border-2 text-left transition-all duration-300 relative overflow-hidden ${
+                      selected === template.id
+                        ? 'border-blue-600 bg-blue-600/5 shadow-xl shadow-blue-500/10'
+                        : 'border-gray-50 dark:border-white/5 hover:border-blue-500/30'
+                    }`}
+                  >
+                    {selected === template.id && <Sparkles className="absolute -top-2 -right-2 w-12 h-12 text-blue-600/10" />}
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform ${
+                       selected === template.id ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-gray-50 dark:bg-white/5'
+                    }`}>
+                      {template.icon}
+                    </div>
+                    <h3 className="font-bold text-lg mb-1">{template.name}</h3>
+                    <p className="text-xs text-muted-foreground font-medium">{template.description}</p>
+                    {selected === template.id && (
+                       <div className="mt-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600">
+                         Selected <ChevronRight className="w-3 h-3" />
+                       </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+           </div>
+        </div>
+
+        {/* Sidebar Summary */}
+        <div className="space-y-6">
+           <div className="glass-card p-8 rounded-[3rem] sticky top-24 space-y-6 border-blue-500/20 shadow-2xl shadow-blue-500/5">
+              <h3 className="text-lg font-bold font-syne">Creation Summary</h3>
+              
+              <div className="space-y-4">
+                 <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground font-medium">Form Name</span>
+                    <span className="font-bold truncate max-w-[120px]">{formName || 'Untitled'}</span>
+                 </div>
+                 <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground font-medium">Template</span>
+                    <span className="font-bold capitalize">{selected || 'None'}</span>
+                 </div>
+                 <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground font-medium">Status</span>
+                    <span className="flex items-center gap-1.5 font-bold text-green-600"><span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Active</span>
+                 </div>
+              </div>
+
+              {error && (
+                <div className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-2xl space-y-3">
+                   <p className="text-xs font-bold text-red-600 flex items-center gap-2">
+                     <Shield className="w-4 h-4" /> Limit Reached
+                   </p>
+                   <p className="text-[10px] text-red-600/70 leading-relaxed font-medium">{error}</p>
+                   <Link href="/dashboard/billing" className="block w-full py-2 bg-red-600 text-white text-center text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-red-700 transition-colors">
+                      Upgrade to Pro
+                   </Link>
+                </div>
+              )}
+
+              <button
+                onClick={handleCreate}
+                disabled={!selected || !formName.trim() || loading}
+                className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-[2rem] transition-all shadow-xl shadow-blue-500/20 active:scale-95 disabled:opacity-40 disabled:scale-100 flex items-center justify-center gap-3 text-xs uppercase tracking-widest"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                {loading ? 'Processing...' : 'Create Asset Now'}
+              </button>
+
+              <p className="text-center text-[10px] text-muted-foreground font-medium">
+                 Launch and get your embed code instantly.
+              </p>
+           </div>
+
+           <div className="glass-card p-8 rounded-[3rem] space-y-4">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pro Tip</h4>
+              <p className="text-xs text-muted-foreground leading-relaxed font-medium italic">
+                "Use a descriptive name like 'FB Ads - Q2' to easily track ROI in your dashboard insights."
+              </p>
+           </div>
+        </div>
       </div>
     </div>
   )

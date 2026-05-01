@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     // Create Org
     const { data: org, error: orgError } = await (adminSupabase.from('orgs') as any)
       .insert({
-        name: user.email?.split('@')[0] + "'s Organization"
+        name: user.user_metadata?.org_name || (user.email?.split('@')[0] + "'s Organization")
       })
       .select()
       .single()

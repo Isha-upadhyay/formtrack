@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { CheckCircle2, ChevronLeft, ArrowRight, Loader2, Sparkles } from 'lucide-react'
 
 interface Field {
-  id: string; type: string; label: string; placeholder?: string; required: boolean; options?: string[]
+  id: string; type: string; label: string; placeholder?: string; required: boolean; options?: string[]; step?: number
 }
 
 interface FormSettings {
@@ -46,6 +47,7 @@ export default function PublicForm({ form }: { form: Form }) {
     captured.referrer = document.referrer
     setSourceParams(captured)
   }, [])
+
   const steps = Array.from(new Set(form.fields.map(f => f.step || 1))).sort((a, b) => a - b)
   const maxStep = steps[steps.length - 1] || 1
   const currentFields = form.fields.filter(f => (f.step || 1) === currentStep)
@@ -84,45 +86,57 @@ export default function PublicForm({ form }: { form: Form }) {
 
   const s = form.settings
 
-  // Shared input style
-  const inputBase = "w-full border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 transition text-gray-800 bg-white/80 placeholder-gray-400"
-
   if (submitted) {
     return (
-      <div className="max-w-md w-full rounded-2xl shadow-lg p-10 text-center"
-        style={{ backgroundColor: s.bgColor, fontFamily: s.fontFamily }}>
-        <div className="text-5xl mb-4">✅</div>
-        <h2 className="text-xl font-bold mb-2" style={{ color: '#111827' }}>Thank you!</h2>
-        <p style={{ color: '#4b5563' }}>{s.successMessage}</p>
+      <div className="max-w-lg w-full p-10 text-center animate-in zoom-in-95 duration-500 bg-white shadow-2xl rounded-[3rem]"
+        style={{ fontFamily: s.fontFamily }}>
+        <div className="w-20 h-20 bg-green-500 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-xl shadow-green-500/20">
+          <CheckCircle2 className="w-10 h-10 text-white" />
+        </div>
+        <h2 className="text-3xl font-black mb-4 tracking-tighter" style={{ color: '#0f172a' }}>Thank you!</h2>
+        <p className="text-lg text-muted-foreground leading-relaxed mb-8">{s.successMessage}</p>
+        <div className="flex items-center justify-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-widest">
+           <Sparkles className="w-4 h-4 text-blue-500" />
+           Verified by FormTrack
+        </div>
       </div>
     )
   }
 
-  return (
-    <div className="max-w-md w-full rounded-2xl shadow-lg overflow-hidden"
-      style={{ backgroundColor: s.bgColor, fontFamily: s.fontFamily }}>
-      <div className="p-8">
-        <h1 className="text-2xl font-bold mb-2" style={{ color: '#111827' }}>{form.name}</h1>
-        {form.description && (
-          <p className="text-sm mb-4" style={{ color: '#6b7280' }}>{form.description}</p>
-        )}
+  const inputBase = "w-full border-2 border-gray-100 px-5 py-4 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 transition-all text-gray-900 bg-white placeholder-gray-400"
+  const labelClass = "block text-xs font-black uppercase tracking-widest text-muted-foreground mb-2 ml-1"
 
-        {/* Progress bar */}
+  return (
+    <div className="max-w-lg w-full bg-white shadow-3xl overflow-hidden animate-in fade-in duration-700 rounded-[3rem]"
+      style={{ fontFamily: s.fontFamily }}>
+      <div className="p-10">
+        <div className="mb-10">
+          <h1 className="text-3xl font-black mb-3 tracking-tighter" style={{ color: '#0f172a' }}>{form.name}</h1>
+          {form.description && (
+            <p className="text-base text-muted-foreground leading-relaxed">{form.description}</p>
+          )}
+        </div>
+
+        {/* Premium Progress bar */}
         {maxStep > 1 && (
-          <div className="flex gap-1 mb-6">
+          <div className="flex gap-2 mb-10">
             {steps.map(step => (
-              <div key={step} className={`h-1 flex-1 rounded-full ${step <= currentStep ? 'bg-blue-600' : 'bg-gray-200 opacity-30'}`}
-                style={{ backgroundColor: step <= currentStep ? s.accentColor : undefined }} />
+              <div key={step} className="h-1.5 flex-1 rounded-full bg-gray-100 overflow-hidden relative">
+                <div 
+                  className={`absolute inset-0 transition-all duration-700 ${step <= currentStep ? 'bg-blue-600' : 'bg-transparent'}`}
+                  style={{ backgroundColor: step <= currentStep ? s.accentColor : undefined }}
+                />
+              </div>
             ))}
           </div>
         )}
 
-        <div className="space-y-4 mt-6 min-h-[120px]">
+        <div className="space-y-6 animate-in slide-in-from-bottom-2 duration-300">
           {currentFields.map((field) => (
-            <div key={field.id}>
-              <label className="block text-sm font-medium mb-1" style={{ color: '#374151' }}>
+            <div key={field.id} className="space-y-1">
+              <label className={labelClass}>
                 {field.label}
-                {field.required && <span style={{ color: '#ef4444' }} className="ml-1">*</span>}
+                {field.required && <span className="text-red-500 ml-1">*</span>}
               </label>
 
               {field.type === 'textarea' ? (
@@ -138,35 +152,37 @@ export default function PublicForm({ form }: { form: Form }) {
                 <select
                   value={values[field.id] || ''}
                   onChange={(e) => setValues({ ...values, [field.id]: e.target.value })}
-                  className={`${inputBase} cursor-pointer`}
+                  className={`${inputBase} cursor-pointer appearance-none`}
                   style={{ borderRadius: s.borderRadius }}>
                   <option value="">Select an option</option>
                   {field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                 </select>
               ) : field.type === 'radio' ? (
-                <div className="space-y-2">
+                <div className="space-y-3 pt-2">
                   {field.options?.map(opt => (
-                    <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: '#374151' }}>
+                    <label key={opt} className="flex items-center gap-4 p-4 border-2 border-gray-50 rounded-2xl cursor-pointer hover:bg-gray-50 transition-all">
                       <input type="radio" name={field.id} value={opt}
                         checked={values[field.id] === opt}
-                        onChange={() => setValues({ ...values, [field.id]: opt })} />
-                      {opt}
+                        onChange={() => setValues({ ...values, [field.id]: opt })}
+                        className="w-5 h-5 border-2 text-blue-600" />
+                      <span className="text-sm font-bold text-gray-700">{opt}</span>
                     </label>
                   ))}
                 </div>
               ) : field.type === 'checkbox' ? (
-                <div className="space-y-2">
+                <div className="space-y-3 pt-2">
                   {field.options?.map(opt => {
                     const checked = values[field.id]?.split(',').includes(opt) || false
                     return (
-                      <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: '#374151' }}>
+                      <label key={opt} className="flex items-center gap-4 p-4 border-2 border-gray-50 rounded-2xl cursor-pointer hover:bg-gray-50 transition-all">
                         <input type="checkbox" checked={checked}
                           onChange={() => {
                             const current = values[field.id]?.split(',').filter(Boolean) || []
                             const updated = checked ? current.filter(v => v !== opt) : [...current, opt]
                             setValues({ ...values, [field.id]: updated.join(',') })
-                          }} />
-                        {opt}
+                          }}
+                          className="w-5 h-5 rounded border-2 text-blue-600" />
+                        <span className="text-sm font-bold text-gray-700">{opt}</span>
                       </label>
                     )
                   })}
@@ -183,40 +199,48 @@ export default function PublicForm({ form }: { form: Form }) {
               )}
 
               {errors[field.id] && (
-                <p className="text-red-500 text-xs mt-1">{errors[field.id]}</p>
+                <p className="text-red-500 text-[10px] font-bold uppercase tracking-widest mt-1.5 ml-1">{errors[field.id]}</p>
               )}
             </div>
           ))}
 
-          <div className="pt-2 flex gap-3">
+          <div className="pt-6 flex gap-4">
             {currentStep > 1 && (
               <button
                 onClick={handleBack}
-                className="flex-1 py-3 bg-gray-100 text-gray-600 font-semibold text-sm transition"
+                className="flex-1 py-5 bg-gray-100 text-gray-600 font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
                 style={{ borderRadius: s.borderRadius }}>
-                Back
+                <ChevronLeft className="w-4 h-4" /> Back
               </button>
             )}
             {currentStep < maxStep ? (
               <button
                 onClick={handleNext}
-                className="flex-1 py-3 text-white font-semibold text-sm transition"
+                className="flex-1 py-5 text-white font-black text-xs uppercase tracking-widest transition-all active:scale-95 shadow-xl shadow-blue-500/20 flex items-center justify-center gap-2"
                 style={{ backgroundColor: s.accentColor, borderRadius: s.borderRadius }}>
-                Next
+                Next Step <ArrowRight className="w-4 h-4" />
               </button>
             ) : (
               <button
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="flex-1 py-3 text-white font-semibold text-sm disabled:opacity-60 transition"
+                className="flex-1 py-5 text-white font-black text-xs uppercase tracking-widest disabled:opacity-60 transition-all active:scale-95 shadow-xl shadow-blue-500/20 flex items-center justify-center gap-2"
                 style={{ backgroundColor: s.accentColor, borderRadius: s.borderRadius }}>
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 {submitting ? 'Submitting...' : s.submitLabel}
               </button>
             )}
           </div>
         </div>
 
-        <p className="text-center text-xs mt-6" style={{ color: '#d1d5db' }}>Powered by FormTrack</p>
+        <div className="mt-12 flex flex-col items-center gap-2">
+           <p className="text-[10px] font-black uppercase tracking-widest text-gray-300">Powered by FormTrack</p>
+           <div className="flex gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-600/20" />
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-600/40" />
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-600/60" />
+           </div>
+        </div>
       </div>
     </div>
   )

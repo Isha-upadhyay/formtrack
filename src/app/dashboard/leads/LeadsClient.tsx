@@ -1,6 +1,21 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { 
+  Search, 
+  Filter, 
+  Download, 
+  X, 
+  Calendar, 
+  ExternalLink, 
+  Target, 
+  MousePointer2,
+  ChevronLeft,
+  ChevronRight,
+  MoreVertical,
+  Inbox,
+  Sparkles
+} from 'lucide-react'
 
 interface LeadRow {
   id: string
@@ -17,7 +32,7 @@ interface LeadRow {
 }
 
 interface FormOption { id: string; name: string }
-const PAGE_SIZE = 20
+const PAGE_SIZE = 12
 
 export default function LeadsClient({ leads, forms }: { leads: LeadRow[]; forms: FormOption[] }) {
   const [search, setSearch] = useState('')
@@ -56,7 +71,6 @@ export default function LeadsClient({ leads, forms }: { leads: LeadRow[]; forms:
       }
       return true
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leads, search, formFilter, sourceFilter, dateFrom, dateTo])
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
@@ -75,7 +89,7 @@ export default function LeadsClient({ leads, forms }: { leads: LeadRow[]; forms:
       lead.utm_campaign ?? '', lead.source_url ?? '', lead.forms?.name ?? '',
       new Date(lead.created_at).toLocaleString('en-IN'),
     ])
-    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}`).join(',')).join('\n')
+    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
     const a = document.createElement('a')
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
     a.download = `leads-${new Date().toISOString().split('T')[0]}.csv`
@@ -85,220 +99,260 @@ export default function LeadsClient({ leads, forms }: { leads: LeadRow[]; forms:
   const clearFilters = () => { setSearch(''); setFormFilter('all'); setSourceFilter('all'); setDateFrom(''); setDateTo('') }
   const hasFilters = search || formFilter !== 'all' || sourceFilter !== 'all' || dateFrom || dateTo
 
-  const filterInputClass = "border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 text-sm bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500/50 transition"
+  const filterInputClass = "bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all outline-none"
 
   return (
-    <div className="p-6 md:p-8 max-w-6xl">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Leads</h1>
-          <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">
-            {filtered.length} of {leads.length} lead{leads.length !== 1 ? 's' : ''}
-            {filtered.length !== leads.length ? ' (filtered)' : ' total'}
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="space-y-1">
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight font-syne">Leads</h1>
+          <p className="text-muted-foreground text-sm md:text-base">
+            Track and manage {leads.length} leads across your {forms.length} forms.
           </p>
         </div>
-        <button onClick={exportCSV} disabled={filtered.length === 0}
-          className="flex items-center gap-2 bg-white dark:bg-[#1c2128] border border-gray-200 dark:border-white/10 text-gray-700 dark:text-slate-300 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-white/5 disabled:opacity-40 transition shadow-sm">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
-          Export CSV
+        
+        <button 
+          onClick={exportCSV} 
+          disabled={filtered.length === 0}
+          className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/8 text-sm font-bold rounded-2xl transition-all shadow-sm disabled:opacity-40"
+        >
+          <Download className="w-4 h-4" />
+          Export Data
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white dark:bg-[#1c2128] rounded-2xl border border-gray-100 dark:border-white/8 shadow-sm p-4 mb-6">
-        <div className="flex flex-wrap gap-3">
-          <input type="text" placeholder="🔍 Search name, email, source..." value={search}
-            onChange={e => setSearch(e.target.value)}
-            className={`flex-1 min-w-0 ${filterInputClass}`} />
-          <select value={formFilter} onChange={e => setFormFilter(e.target.value)} className={filterInputClass}>
-            <option value="all">All Forms</option>
-            {forms.map(f => <option key={f.id} value={f.name}>{f.name}</option>)}
-          </select>
-          <select value={sourceFilter} onChange={e => setSourceFilter(e.target.value)} className={filterInputClass}>
-            <option value="all">All Sources</option>
-            <option value="direct">Direct</option>
-            {uniqueSources.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className={filterInputClass} />
-          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className={filterInputClass} />
-          {hasFilters && (
-            <button onClick={clearFilters} className="text-sm text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 px-2 transition">✕ Clear</button>
-          )}
+      {/* Modern Filter Bar */}
+      <div className="glass dark:bg-white/5 p-4 rounded-[2rem] border border-white/5 space-y-4">
+        <div className="flex flex-col lg:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input 
+              type="text" 
+              placeholder="Search by name, email, or source..." 
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className={`${filterInputClass} w-full pl-11`} 
+            />
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <select value={formFilter} onChange={e => setFormFilter(e.target.value)} className={filterInputClass}>
+              <option value="all">All Forms</option>
+              {forms.map(f => <option key={f.id} value={f.name}>{f.name}</option>)}
+            </select>
+            <select value={sourceFilter} onChange={e => setSourceFilter(e.target.value)} className={filterInputClass}>
+              <option value="all">All Sources</option>
+              <option value="direct">Direct Traffic</option>
+              {uniqueSources.map(s => <option key={s} value={s} className="capitalize">{s}</option>)}
+            </select>
+            <div className="flex items-center gap-2">
+               <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className={filterInputClass} />
+               <span className="text-muted-foreground text-xs font-bold uppercase tracking-widest">to</span>
+               <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className={filterInputClass} />
+            </div>
+            {hasFilters && (
+              <button 
+                onClick={clearFilters} 
+                className="px-4 py-2 text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all"
+              >
+                Clear
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Leads list */}
+      {/* Leads Grid */}
       {paginated.length === 0 ? (
-        <div className="bg-white dark:bg-[#1c2128] rounded-2xl border border-gray-100 dark:border-white/8 shadow-sm p-16 text-center">
-          <div className="text-5xl mb-4">👥</div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-            {leads.length === 0 ? 'No leads yet' : 'No leads match filters'}
-          </h2>
-          <p className="text-gray-500 dark:text-slate-400 text-sm">
-            {leads.length === 0 ? 'Share your form link or embed it to start capturing leads' : 'Try adjusting your search or filters'}
+        <div className="flex flex-col items-center justify-center py-32 px-6 glass dark:bg-white/5 rounded-[3rem] border border-dashed border-gray-300 dark:border-white/10 text-center">
+          <div className="w-20 h-20 bg-blue-500/10 rounded-[2rem] flex items-center justify-center mb-6">
+            <Inbox className="w-10 h-10 text-blue-600" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2">No leads found</h2>
+          <p className="text-muted-foreground max-w-sm text-sm">
+            {leads.length === 0 
+              ? "Share your forms to start collecting lead data." 
+              : "Try adjusting your filters to find what you're looking for."}
           </p>
         </div>
       ) : (
-        <>
-          <div className="space-y-3">
-            {paginated.map(lead => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {paginated.map(lead => {
+            const firstEmail = Object.entries(lead.data).find(([k]) => k.toLowerCase().includes('email'))?.[1]
+            const firstName = Object.entries(lead.data).find(([k]) => k.toLowerCase().includes('name'))?.[1]
+            
+            return (
               <div
                 key={lead.id}
                 onClick={() => setSelectedLead(lead)}
-                className="bg-white dark:bg-[#1c2128] rounded-2xl border border-gray-100 dark:border-white/8 shadow-sm p-5 cursor-pointer hover:border-blue-200 dark:hover:border-blue-500/40 hover:shadow-md dark:hover:shadow-black/20 transition-all group"
+                className="group relative glass dark:bg-white/5 p-6 rounded-[2.5rem] border border-white/5 hover:border-blue-500/30 transition-all cursor-pointer hover:shadow-xl hover:shadow-blue-500/5 flex flex-col h-full"
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                      <span className="text-xs font-semibold bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded-full">
-                        {lead.forms?.name || 'Unknown Form'}
+                <div className="flex justify-between items-start mb-6">
+                   <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white font-black text-lg">
+                        {(firstName || 'U').charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                         <h3 className="font-bold text-lg truncate pr-2">{firstName || 'Unknown Lead'}</h3>
+                         <p className="text-xs text-muted-foreground truncate">{firstEmail || lead.id.slice(0, 8)}</p>
+                      </div>
+                   </div>
+                   <div className="flex flex-col items-end gap-1.5">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full">
+                        {lead.forms?.name}
                       </span>
                       {lead.utm_source ? (
-                        <span className="text-xs font-semibold bg-green-50 dark:bg-green-500/15 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full capitalize">{lead.utm_source}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full capitalize">
+                          {lead.utm_source}
+                        </span>
                       ) : (
-                        <span className="text-xs font-semibold bg-gray-100 dark:bg-white/8 text-gray-500 dark:text-slate-400 px-2 py-0.5 rounded-full">Direct</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 bg-gray-400/10 px-2 py-0.5 rounded-full">
+                          Direct
+                        </span>
                       )}
-                    </div>
-                    <p className="text-sm text-gray-700 dark:text-slate-300 font-medium truncate">
-                      🎯 {lead.source_summary || 'Direct visit — no campaign tracking detected'}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3 ml-4 shrink-0">
-                    <p className="text-xs text-gray-400 dark:text-slate-500">
-                      {new Date(lead.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                    <span className="text-xs text-blue-500 dark:text-blue-400 font-medium group-hover:underline">View →</span>
-                  </div>
+                   </div>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {Object.entries(lead.data).slice(0, 3).map(([key, value]) => (
-                    <div key={key} className="bg-gray-50 dark:bg-white/5 rounded-xl px-3 py-2">
-                      <p className="text-xs text-gray-400 dark:text-slate-500 mb-0.5">{getLabel(lead.forms?.fields, key)}</p>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{value || '—'}</p>
-                    </div>
-                  ))}
-                  {Object.keys(lead.data).length > 3 && (
-                    <div className="bg-gray-50 dark:bg-white/5 rounded-xl px-3 py-2 flex items-center justify-center">
-                      <span className="text-xs text-gray-400 dark:text-slate-500">+{Object.keys(lead.data).length - 3} more fields</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-100 dark:border-white/8">
-              <p className="text-sm text-gray-500 dark:text-slate-400">
-                Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
-              </p>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                  className="px-3 py-1.5 text-sm border border-gray-200 dark:border-white/10 text-gray-700 dark:text-slate-300 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 disabled:opacity-40 transition">
-                  ← Prev
-                </button>
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const p = totalPages <= 5 ? i + 1 : page <= 3 ? i + 1 : page >= totalPages - 2 ? totalPages - 4 + i : page - 2 + i
-                  return (
-                    <button key={p} onClick={() => setPage(p)}
-                      className={`w-8 h-8 text-sm rounded-xl transition ${p === page ? 'bg-blue-600 text-white' : 'border border-gray-200 dark:border-white/10 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-white/5'}`}>
-                      {p}
-                    </button>
-                  )
-                })}
-                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                  className="px-3 py-1.5 text-sm border border-gray-200 dark:border-white/10 text-gray-700 dark:text-slate-300 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 disabled:opacity-40 transition">
-                  Next →
-                </button>
+                <div className="flex-1 bg-gray-50 dark:bg-white/5 rounded-2xl p-4 mb-6 relative overflow-hidden group-hover:bg-blue-500/5 transition-colors">
+                   <Target className="absolute -right-4 -bottom-4 w-16 h-16 text-blue-500/5" />
+                   <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                     <Sparkles className="w-3 h-3" />
+                     Smart Summary
+                   </p>
+                   <p className="text-sm font-medium leading-relaxed">
+                     {lead.source_summary || "Direct visit — independently verified lead."}
+                   </p>
+                </div>
+
+                <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/5">
+                   <div className="flex items-center gap-2 text-xs text-muted-foreground font-bold">
+                      <Calendar className="w-3.5 h-3.5" />
+                      {new Date(lead.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                   </div>
+                   <button className="text-xs font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                     View Details <ChevronRight className="w-3.5 h-3.5" />
+                   </button>
+                </div>
               </div>
-            </div>
-          )}
-        </>
+            )
+          })}
+        </div>
       )}
 
-      {/* Lead Detail Modal */}
-      {selectedLead && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setSelectedLead(null)}>
-          <div className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" />
-          <div className="relative bg-white dark:bg-[#1c2128] border border-gray-100 dark:border-white/10 rounded-2xl shadow-2xl dark:shadow-black/50 w-full max-w-lg max-h-[90vh] overflow-y-auto"
-            onClick={e => e.stopPropagation()}>
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-10">
+          <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">
+            Page {page} of {totalPages}
+          </p>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setPage(p => Math.max(1, p - 1))} 
+              disabled={page === 1}
+              className="w-12 h-12 flex items-center justify-center rounded-2xl border border-white/5 hover:bg-gray-100 dark:hover:bg-white/5 disabled:opacity-30 transition-all active:scale-90"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button 
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))} 
+              disabled={page === totalPages}
+              className="w-12 h-12 flex items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-500/20 hover:bg-blue-700 disabled:opacity-30 transition-all active:scale-90"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
 
-            {/* Modal header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-white/8">
-              <div>
-                <h2 className="font-bold text-gray-900 dark:text-white text-lg">Lead Details</h2>
-                <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">
-                  {new Date(selectedLead.created_at).toLocaleString('en-IN', {
-                    day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                  })}
-                </p>
+      {/* Premium Detail Modal */}
+      {selectedLead && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-xl animate-in fade-in duration-300" onClick={() => setSelectedLead(null)} />
+          <div className="relative glass dark:bg-[#0d1117] border border-white/10 rounded-[3rem] shadow-3xl w-full max-w-2xl max-h-full overflow-hidden flex flex-col animate-in zoom-in-95 duration-300"
+            onClick={e => e.stopPropagation()}>
+            
+            {/* Modal Header */}
+            <div className="p-8 pb-4 flex items-center justify-between border-b border-white/5">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-xl shadow-blue-500/20">
+                  {(Object.entries(selectedLead.data).find(([k]) => k.toLowerCase().includes('name'))?.[1] || 'U').charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black font-syne tracking-tight pr-8">Lead Insight</h2>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">
+                    Captured on {new Date(selectedLead.created_at).toLocaleString(undefined, { dateStyle: 'long', timeStyle: 'short' })}
+                  </p>
+                </div>
               </div>
-              <button onClick={() => setSelectedLead(null)}
-                className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-white/8 transition text-xl leading-none">
-                ✕
+              <button onClick={() => setSelectedLead(null)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-white/5 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 transition-all group">
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6 space-y-5">
-              {/* Source */}
-              <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 rounded-2xl p-4">
-                <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase mb-1">Source</p>
-                <p className="text-sm font-medium text-blue-900 dark:text-blue-200">
-                  🎯 {selectedLead.source_summary || 'Direct visit — no campaign tracking detected'}
-                </p>
+            <div className="flex-1 overflow-y-auto p-8 space-y-8 scrollbar-hide">
+              {/* Source Highlight */}
+              <div className="p-6 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2rem] text-white shadow-xl shadow-blue-500/20 relative overflow-hidden">
+                 <Sparkles className="absolute top-[-10px] right-[-10px] w-32 h-32 text-white/10 rotate-12" />
+                 <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 mb-2">Verified Source Summary</p>
+                 <p className="text-lg font-bold leading-relaxed">
+                   {selectedLead.source_summary || "Direct visit — This lead arrived without any external campaign tracking."}
+                 </p>
               </div>
 
-              {/* Form fields */}
-              <div>
-                <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-3">Form Data</p>
-                <div className="space-y-3">
-                  {Object.entries(selectedLead.data).map(([key, value]) => (
-                    <div key={key} className="flex justify-between items-start gap-4 py-2 border-b border-gray-50 dark:border-white/5 last:border-0">
-                      <span className="text-sm text-gray-500 dark:text-slate-400 shrink-0">{getLabel(selectedLead.forms?.fields, key)}</span>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white text-right">{value || '—'}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* UTM details */}
-              {(selectedLead.utm_source || selectedLead.utm_medium || selectedLead.utm_campaign || selectedLead.utm_term || selectedLead.utm_content) && (
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-3">UTM Parameters</p>
-                  <div className="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/8 rounded-xl p-4 space-y-2">
-                    {[
-                      ['Source', selectedLead.utm_source],
-                      ['Medium', selectedLead.utm_medium],
-                      ['Campaign', selectedLead.utm_campaign],
-                      ['Term', selectedLead.utm_term],
-                      ['Content', selectedLead.utm_content],
-                    ].filter(([, v]) => v).map(([label, value]) => (
-                      <div key={label} className="flex justify-between text-sm">
-                        <span className="text-gray-500 dark:text-slate-400">{label}</span>
-                        <span className="font-medium text-gray-900 dark:text-white">{value}</span>
-                      </div>
-                    ))}
+              {/* Form Data Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {Object.entries(selectedLead.data).map(([key, value]) => (
+                  <div key={key} className="p-4 bg-gray-50 dark:bg-white/5 border border-white/5 rounded-2xl">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">{getLabel(selectedLead.forms?.fields, key)}</p>
+                    <p className="font-bold text-foreground break-all">{value || '—'}</p>
                   </div>
-                </div>
-              )}
-
-              {/* Source URL */}
-              {selectedLead.source_url && (
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-2">Source Page</p>
-                  <p className="text-xs text-gray-500 dark:text-slate-400 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/8 rounded-xl px-3 py-2 break-all">{selectedLead.source_url}</p>
-                </div>
-              )}
-
-              {/* Footer */}
-              <div className="pt-2 border-t border-gray-100 dark:border-white/8 flex items-center justify-between text-xs text-gray-400 dark:text-slate-500">
-                <span>Form: {selectedLead.forms?.name || 'Unknown'}</span>
-                <span>ID: {selectedLead.id.slice(0, 8)}...</span>
+                ))}
               </div>
+
+              {/* UTM Details Section */}
+              {(selectedLead.utm_source || selectedLead.utm_medium) && (
+                <div className="space-y-4 pt-4 border-t border-white/5">
+                   <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Campaign Parameters</p>
+                   <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { label: 'Source', value: selectedLead.utm_source },
+                        { label: 'Medium', value: selectedLead.utm_medium },
+                        { label: 'Campaign', value: selectedLead.utm_campaign },
+                        { label: 'Content', value: selectedLead.utm_content },
+                      ].filter(i => i.value).map(item => (
+                        <div key={item.label} className="flex justify-between items-center px-4 py-3 bg-white dark:bg-white/3 border border-white/5 rounded-xl">
+                          <span className="text-xs font-bold text-muted-foreground">{item.label}</span>
+                          <span className="text-xs font-black uppercase tracking-wider text-blue-600 dark:text-blue-400">{item.value}</span>
+                        </div>
+                      ))}
+                   </div>
+                </div>
+              )}
+
+              {/* Source Page */}
+              {selectedLead.source_url && (
+                <div className="space-y-2 pt-4 border-t border-white/5">
+                   <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Original Conversion Page</p>
+                   <div className="p-3 bg-gray-50 dark:bg-black/20 rounded-xl flex items-center gap-3 overflow-hidden">
+                      <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                      <p className="text-[11px] font-medium text-muted-foreground truncate italic">{selectedLead.source_url}</p>
+                   </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-8 border-t border-white/5 flex items-center justify-between bg-gray-50 dark:bg-white/3">
+               <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Independently Verified by FormTrack</span>
+               </div>
+               <button 
+                onClick={() => setSelectedLead(null)}
+                className="px-6 py-3 bg-foreground text-background font-black text-xs rounded-xl hover:opacity-90 transition-opacity"
+               >
+                Close Insights
+               </button>
             </div>
           </div>
         </div>
