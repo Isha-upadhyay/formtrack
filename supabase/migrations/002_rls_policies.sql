@@ -1,133 +1,122 @@
 -- 002_rls_policies.sql
 -- Row-level security policies for orgs, profiles, forms, and leads.
 
-alter table public.orgs enable row level security;
-alter table public.profiles enable row level security;
-alter table public.forms enable row level security;
-alter table public.leads enable row level security;
+ALTER TABLE public.orgs    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.forms   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.leads   ENABLE ROW LEVEL SECURITY;
 
--- ORGS: user can read/update only their own org via profile.org_id
-drop policy if exists "orgs_select_own_org" on public.orgs;
-create policy "orgs_select_own_org"
-  on public.orgs
-  for select
-  using (
-    exists (
-      select 1
-      from public.profiles p
-      where p.id = auth.uid()
-        and p.org_id = orgs.id
+-- ── ORGS ──────────────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "orgs_select_own_org" ON public.orgs;
+CREATE POLICY "orgs_select_own_org"
+  ON public.orgs FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = auth.uid() AND p.org_id = orgs.id
     )
   );
 
-drop policy if exists "orgs_update_own_org" on public.orgs;
-create policy "orgs_update_own_org"
-  on public.orgs
-  for update
-  using (
-    exists (
-      select 1
-      from public.profiles p
-      where p.id = auth.uid()
-        and p.org_id = orgs.id
+DROP POLICY IF EXISTS "orgs_update_own_org" ON public.orgs;
+CREATE POLICY "orgs_update_own_org"
+  ON public.orgs FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = auth.uid() AND p.org_id = orgs.id
     )
   )
-  with check (
-    exists (
-      select 1
-      from public.profiles p
-      where p.id = auth.uid()
-        and p.org_id = orgs.id
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = auth.uid() AND p.org_id = orgs.id
     )
   );
 
--- PROFILES: user can read/update only their own profile
-drop policy if exists "profiles_select_own" on public.profiles;
-create policy "profiles_select_own"
-  on public.profiles
-  for select
-  using (id = auth.uid());
+-- ── PROFILES ──────────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "profiles_select_own" ON public.profiles;
+CREATE POLICY "profiles_select_own"
+  ON public.profiles FOR SELECT
+  USING (id = auth.uid());
 
-drop policy if exists "profiles_update_own" on public.profiles;
-create policy "profiles_update_own"
-  on public.profiles
-  for update
-  using (id = auth.uid())
-  with check (id = auth.uid());
+DROP POLICY IF EXISTS "profiles_update_own" ON public.profiles;
+CREATE POLICY "profiles_update_own"
+  ON public.profiles FOR UPDATE
+  USING (id = auth.uid())
+  WITH CHECK (id = auth.uid());
 
--- FORMS: user can CRUD only forms in their org
-drop policy if exists "forms_select_by_org" on public.forms;
-create policy "forms_select_by_org"
-  on public.forms
-  for select
-  using (
+-- ── FORMS ─────────────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "forms_select_by_org" ON public.forms;
+CREATE POLICY "forms_select_by_org"
+  ON public.forms FOR SELECT
+  USING (
     org_id = (
-      select p.org_id
-      from public.profiles p
-      where p.id = auth.uid()
+      SELECT p.org_id FROM public.profiles p WHERE p.id = auth.uid()
     )
   );
 
-drop policy if exists "forms_insert_by_org" on public.forms;
-create policy "forms_insert_by_org"
-  on public.forms
-  for insert
-  with check (
+-- CRITICAL FIX: anon users must be able to read active forms
+-- so embed.js and /f/[formId] pages work without auth
+DROP POLICY IF EXISTS "forms_select_public_active" ON public.forms;
+CREATE POLICY "forms_select_public_active"
+  ON public.forms FOR SELECT
+  TO anon
+  USING (status = 'active');
+
+DROP POLICY IF EXISTS "forms_insert_by_org" ON public.forms;
+CREATE POLICY "forms_insert_by_org"
+  ON public.forms FOR INSERT
+  WITH CHECK (
     org_id = (
-      select p.org_id
-      from public.profiles p
-      where p.id = auth.uid()
+      SELECT p.org_id FROM public.profiles p WHERE p.id = auth.uid()
     )
   );
 
-drop policy if exists "forms_update_by_org" on public.forms;
-create policy "forms_update_by_org"
-  on public.forms
-  for update
-  using (
+DROP POLICY IF EXISTS "forms_update_by_org" ON public.forms;
+CREATE POLICY "forms_update_by_org"
+  ON public.forms FOR UPDATE
+  USING (
     org_id = (
-      select p.org_id
-      from public.profiles p
-      where p.id = auth.uid()
+      SELECT p.org_id FROM public.profiles p WHERE p.id = auth.uid()
     )
   )
-  with check (
+  WITH CHECK (
     org_id = (
-      select p.org_id
-      from public.profiles p
-      where p.id = auth.uid()
+      SELECT p.org_id FROM public.profiles p WHERE p.id = auth.uid()
     )
   );
 
-drop policy if exists "forms_delete_by_org" on public.forms;
-create policy "forms_delete_by_org"
-  on public.forms
-  for delete
-  using (
+DROP POLICY IF EXISTS "forms_delete_by_org" ON public.forms;
+CREATE POLICY "forms_delete_by_org"
+  ON public.forms FOR DELETE
+  USING (
     org_id = (
-      select p.org_id
-      from public.profiles p
-      where p.id = auth.uid()
+      SELECT p.org_id FROM public.profiles p WHERE p.id = auth.uid()
     )
   );
 
--- LEADS: user can read only leads in their org
-drop policy if exists "leads_select_by_org" on public.leads;
-create policy "leads_select_by_org"
-  on public.leads
-  for select
-  using (
+-- ── LEADS ─────────────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "leads_select_by_org" ON public.leads;
+CREATE POLICY "leads_select_by_org"
+  ON public.leads FOR SELECT
+  USING (
     org_id = (
-      select p.org_id
-      from public.profiles p
-      where p.id = auth.uid()
+      SELECT p.org_id FROM public.profiles p WHERE p.id = auth.uid()
     )
   );
 
--- LEADS INSERT: allow public/anon inserts for unauthenticated form submissions
-drop policy if exists "leads_insert_anon" on public.leads;
-create policy "leads_insert_anon"
-  on public.leads
-  for insert
-  to anon
-  with check (true);
+-- CRITICAL FIX: anon insert only allowed when the form is active.
+-- This prevents spamming inactive/non-existent forms.
+DROP POLICY IF EXISTS "leads_insert_anon" ON public.leads;
+CREATE POLICY "leads_insert_anon"
+  ON public.leads FOR INSERT
+  TO anon
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.forms f
+      WHERE f.id = leads.form_id AND f.status = 'active'
+    )
+  );
+
+-- Authenticated users cannot delete leads (audit trail)
+-- No DELETE policy = implicit deny

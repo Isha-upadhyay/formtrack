@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ThemeToggle } from '@/components/ThemeToggle'
+import { ThemeToggle } from '@/components/ThemeToggle'  
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
@@ -41,10 +41,6 @@ export default function SignupPage() {
       setLoading(false); return
     }
     if (data.user) {
-      const slug = orgName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-        + '-' + data.user.id.slice(0, 6)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase.from('organizations') as any).insert({ name: orgName, slug, owner_id: data.user.id })
       if (data.session) { router.push('/dashboard'); router.refresh() }
       else setVerificationSent(true)
     }

@@ -24,16 +24,23 @@ export interface FormSettings {
   notificationEmail?: string
 }
 
+export interface FormDesign {
+  bgColor?: string
+  accentColor?: string
+  fontFamily?: string
+  borderRadius?: string
+}
+
+// matches SQL schema: status text, no updated_at
 export interface Form {
   id: string
   org_id: string
   name: string
-  description?: string
   fields: FormField[]
   settings: FormSettings
-  is_active: boolean
+  design: FormDesign
+  status: 'active' | 'paused'
   created_at: string
-  updated_at: string
 }
 
 export interface Lead {
@@ -41,43 +48,42 @@ export interface Lead {
   form_id: string
   org_id: string
   data: Record<string, string>
-  source_url?: string
-  utm_source?: string
-  utm_medium?: string
-  utm_campaign?: string
-  utm_term?: string
-  utm_content?: string
-  source_summary?: string
+  source_url?: string | null
+  utm_source?: string | null
+  utm_medium?: string | null
+  utm_campaign?: string | null
+  utm_term?: string | null
+  utm_content?: string | null
+  source_summary?: string | null
+  ip_address?: string | null
   created_at: string
   form?: { name: string; fields?: Array<{ id: string; label: string }> }
 }
 
-export interface Organization {
+export interface Org {
   id: string
   name: string
-  slug: string
-  owner_id: string
+  plan: 'free' | 'pro'
+  plan_expires_at: string | null
+  leads_used_this_month: number
+  razorpay_payment_id: string | null
   created_at: string
 }
 
-export interface Subscription {
+export interface Profile {
   id: string
   org_id: string
-  plan: 'free' | 'pro'
-  status: 'active' | 'inactive' | 'cancelled'
-  razorpay_payment_id?: string
-  razorpay_order_id?: string
+  email: string
   created_at: string
 }
 
-// ─── Plan limits ──────────────────────────────────────────────────────────────
+// Plan limits
 export const PLAN_LIMITS = {
   free: { forms: 2, leads: 100 },
   pro:  { forms: Infinity, leads: Infinity },
 } as const
 
-// ─── Supabase Database type (must match exact Supabase format) ────────────────
-// Supabase uses Json type for jsonb columns — we cast in usage, not here
+// Supabase Database type — must match supabase/migrations/ exactly
 export type Json =
   | string | number | boolean | null
   | { [key: string]: Json | undefined }
@@ -86,26 +92,52 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
-      organizations: {
+      orgs: {
         Row: {
           id: string
           name: string
-          slug: string
-          owner_id: string
+          plan: string
+          leads_used_this_month: number
+          plan_expires_at: string | null
+          razorpay_payment_id: string | null
           created_at: string
         }
         Insert: {
           id?: string
           name: string
-          slug: string
-          owner_id: string
+          plan?: string
+          leads_used_this_month?: number
+          plan_expires_at?: string | null
+          razorpay_payment_id?: string | null
           created_at?: string
         }
         Update: {
           id?: string
           name?: string
-          slug?: string
-          owner_id?: string
+          plan?: string
+          leads_used_this_month?: number
+          plan_expires_at?: string | null
+          razorpay_payment_id?: string | null
+          created_at?: string
+        }
+      }
+      profiles: {
+        Row: {
+          id: string
+          org_id: string
+          email: string
+          created_at: string
+        }
+        Insert: {
+          id: string
+          org_id: string
+          email: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          email?: string
           created_at?: string
         }
       }
@@ -114,34 +146,31 @@ export interface Database {
           id: string
           org_id: string
           name: string
-          description: string | null
           fields: Json
           settings: Json
-          is_active: boolean
+          design: Json
+          status: string
           created_at: string
-          updated_at: string
         }
         Insert: {
           id?: string
           org_id: string
           name: string
-          description?: string | null
           fields?: Json
           settings?: Json
-          is_active?: boolean
+          design?: Json
+          status?: string
           created_at?: string
-          updated_at?: string
         }
         Update: {
           id?: string
           org_id?: string
           name?: string
-          description?: string | null
           fields?: Json
           settings?: Json
-          is_active?: boolean
+          design?: Json
+          status?: string
           created_at?: string
-          updated_at?: string
         }
       }
       leads: {
@@ -150,13 +179,14 @@ export interface Database {
           form_id: string
           org_id: string
           data: Json
-          source_url: string | null
           utm_source: string | null
           utm_medium: string | null
           utm_campaign: string | null
           utm_term: string | null
           utm_content: string | null
+          source_url: string | null
           source_summary: string | null
+          ip_address: string | null
           created_at: string
         }
         Insert: {
@@ -164,13 +194,14 @@ export interface Database {
           form_id: string
           org_id: string
           data: Json
-          source_url?: string | null
           utm_source?: string | null
           utm_medium?: string | null
           utm_campaign?: string | null
           utm_term?: string | null
           utm_content?: string | null
+          source_url?: string | null
           source_summary?: string | null
+          ip_address?: string | null
           created_at?: string
         }
         Update: {
@@ -178,42 +209,14 @@ export interface Database {
           form_id?: string
           org_id?: string
           data?: Json
-          source_url?: string | null
           utm_source?: string | null
           utm_medium?: string | null
           utm_campaign?: string | null
           utm_term?: string | null
           utm_content?: string | null
+          source_url?: string | null
           source_summary?: string | null
-          created_at?: string
-        }
-      }
-      subscriptions: {
-        Row: {
-          id: string
-          org_id: string
-          plan: string
-          status: string
-          razorpay_payment_id: string | null
-          razorpay_order_id: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          org_id: string
-          plan: string
-          status: string
-          razorpay_payment_id?: string | null
-          razorpay_order_id?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          org_id?: string
-          plan?: string
-          status?: string
-          razorpay_payment_id?: string | null
-          razorpay_order_id?: string | null
+          ip_address?: string | null
           created_at?: string
         }
       }

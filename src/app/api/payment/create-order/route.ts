@@ -1,15 +1,14 @@
 import Razorpay from 'razorpay'
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET } from '@/lib/env'
 
-
 export async function POST(request: Request) {
-
   const razorpay = new Razorpay({
-  key_id: RAZORPAY_KEY_ID,
-  key_secret: RAZORPAY_KEY_SECRET,
-})
+    key_id: RAZORPAY_KEY_ID,
+    key_secret: RAZORPAY_KEY_SECRET,
+  })
+
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -17,17 +16,27 @@ export async function POST(request: Request) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    const { data: profile, error: profileError } = await (supabase.from('profiles') as any)
+    const adminSupabase = createAdminClient() 
+    // Admin client use karo — RLS bypass hoga, session timing issue nahi aayega
+    const { data: profile, error: profileError } = await adminSupabase
+      .from('profiles')
       .select('org_id')
       .eq('id', user.id)
-      .single()
+      .single() as { data: { org_id: string } | null, error: any }
+
     if (profileError || !profile?.org_id) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+      console.error('Payment API: Profile lookup failed', {
+        userId: user.id,
+        error: profileError,
+        profileFound: !!profile
+      })
+      return NextResponse.json({ 
+        error: 'Profile not found. Ensure migrations are applied and your user has an entry in the profiles table.' 
+      }, { status: 404 })
     }
 
     const order = await razorpay.orders.create({
-      amount: 99900, // ₹999 in paise
+      amount: 99900,
       currency: 'INR',
       receipt: `rcpt_${Date.now()}`,
       notes: {

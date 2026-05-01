@@ -11,7 +11,7 @@ declare
   new_org_id uuid;
 begin
   insert into public.orgs (name)
-  values (coalesce(new.email, 'New Organization'))
+  values (coalesce(new.raw_user_meta_data->>'org_name', new.email, 'New Organization'))
   returning id into new_org_id;
 
   insert into public.profiles (id, org_id, email)
