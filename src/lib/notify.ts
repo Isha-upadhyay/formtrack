@@ -58,3 +58,45 @@ export async function sendLeadNotification({
     // Don't throw — email failure should not break form submission
   }
 }
+
+export async function sendAutoReply({
+  toEmail,
+  subject,
+  message,
+  formName,
+}: {
+  toEmail: string
+  subject: string
+  message: string
+  formName: string
+}) {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) return
+
+  const html = `
+    <div style="font-family:Inter,sans-serif;max-width:500px;margin:0 auto;padding:32px;border:1px solid #e5e7eb;border-radius:12px;color:#374151;">
+      <h2 style="color:#111827;font-size:20px;margin-bottom:16px;">${subject}</h2>
+      <div style="line-height:1.6;font-size:15px;white-space:pre-wrap;">${message}</div>
+      <hr style="margin:24px 0;border:0;border-top:1px solid #f3f4f6;" />
+      <p style="font-size:12px;color:#9ca3af;">Sent by ${formName} via FormTrack</p>
+    </div>
+  `
+
+  try {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'onboarding@resend.dev',
+        to: [toEmail],
+        subject: subject,
+        html,
+      }),
+    })
+  } catch (err) {
+    console.error('Auto-reply email failed:', err)
+  }
+}

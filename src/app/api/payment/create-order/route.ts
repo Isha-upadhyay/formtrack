@@ -18,22 +18,8 @@ export async function POST(request: Request) {
     }
     const adminSupabase = createAdminClient() 
     // Admin client use karo — RLS bypass hoga, session timing issue nahi aayega
-    const { data: profile, error: profileError } = await adminSupabase
-      .from('profiles')
-      .select('org_id')
-      .eq('id', user.id)
-      .single() as { data: { org_id: string } | null, error: any }
-
-    if (profileError || !profile?.org_id) {
-      console.error('Payment API: Profile lookup failed', {
-        userId: user.id,
-        error: profileError,
-        profileFound: !!profile
-      })
-      return NextResponse.json({ 
-        error: 'Profile not found. Ensure migrations are applied and your user has an entry in the profiles table.' 
-      }, { status: 404 })
-    }
+    const { data: profile } = await adminSupabase.from('profiles').select('org_id').eq('id', user.id).single() as { data: { org_id: string } | null }
+    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
 
     const order = await razorpay.orders.create({
       amount: 99900,

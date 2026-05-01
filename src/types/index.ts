@@ -20,7 +20,8 @@ export interface FormSettings {
   fontFamily: string
   borderRadius: string
   autoReplyEnabled: boolean
-  autoReplyTemplate?: string
+  autoReplySubject: string
+  autoReplyMessage: string
   notificationEmail?: string
 }
 

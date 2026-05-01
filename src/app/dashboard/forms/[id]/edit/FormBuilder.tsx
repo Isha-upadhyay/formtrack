@@ -7,16 +7,17 @@ import { createClient } from '@/lib/supabase/client'
 type FieldType = 'text' | 'email' | 'phone' | 'textarea' | 'select' | 'radio' | 'checkbox' | 'number' | 'date'
 
 interface Field {
-  id: string; type: FieldType; label: string; placeholder?: string; required: boolean; options?: string[]
+  id: string; type: FieldType; label: string; placeholder?: string; required: boolean; options?: string[]; step: number
 }
 
 interface FormSettings {
-  submitLabel: string; successMessage: string; bgColor: string; accentColor: string
-  fontFamily: string; borderRadius: string; autoReplyEnabled: boolean; notificationEmail?: string
+  submitLabel: string; successMessage: string; notificationEmail: string;
+  autoReplyEnabled: boolean; autoReplySubject: string; autoReplyMessage: string;
+  bgColor: string; accentColor: string; fontFamily: string; borderRadius: string;
 }
 
 interface Form {
-  id: string; name: string; description?: string; fields: Field[]; settings: FormSettings; is_active: boolean
+  id: string; name: string; description?: string; fields: Field[]; settings: FormSettings; status: string
 }
 
 const FIELD_TYPES: { type: FieldType; label: string; icon: string }[] = [
@@ -34,14 +35,27 @@ const FIELD_TYPES: { type: FieldType; label: string; icon: string }[] = [
 function generateId() { return Math.random().toString(36).slice(2, 8) }
 
 export default function FormBuilder({ form }: { form: Form }) {
+  console.log('FormBuilder received form:', form)
+
   const [name, setName] = useState(form.name)
   const [description, setDescription] = useState(form.description || '')
   const [fields, setFields] = useState<Field[]>(form.fields || [])
   const [settings, setSettings] = useState<FormSettings>(form.settings || {
     submitLabel: 'Submit', successMessage: 'Thank you! We will be in touch.',
+    notificationEmail: '', autoReplyEnabled: false,
+    autoReplySubject: 'Thanks for reaching out!',
+    autoReplyMessage: 'Hi there,\n\nThanks for your message! We have received your inquiry and will get back to you shortly.',
     bgColor: '#ffffff', accentColor: '#2563eb', fontFamily: 'Inter, sans-serif',
-    borderRadius: '8px', autoReplyEnabled: false, notificationEmail: '',
+    borderRadius: '8px',
   })
+
+  // Sync state if prop changes (e.g. on navigation)
+  useEffect(() => {
+    setName(form.name)
+    setDescription(form.description || '')
+    setFields(form.fields || [])
+    if (form.settings) setSettings(form.settings)
+  }, [form])
   const [activeTab, setActiveTab] = useState<'fields' | 'design' | 'settings' | 'embed'>('fields')
   const [selectedField, setSelectedField] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -50,11 +64,20 @@ export default function FormBuilder({ form }: { form: Form }) {
   const supabase = createClient()
 
   const addField = (type: FieldType) => {
+    const maxStep = fields.length > 0 ? Math.max(...fields.map(f => f.step)) : 1
     const newField: Field = {
       id: generateId(), type,
       label: `${type.charAt(0).toUpperCase() + type.slice(1)} Field`,
-      placeholder: '', required: false,
+      placeholder: '', required: false, step: maxStep,
       options: ['select', 'radio', 'checkbox'].includes(type) ? ['Option 1', 'Option 2'] : undefined,
+    }
+    setFields([...fields, newField]); setSelectedField(newField.id)
+  }
+
+  const addStep = () => {
+    const maxStep = fields.length > 0 ? Math.max(...fields.map(f => f.step)) : 1
+    const newField: Field = {
+      id: generateId(), type: 'text', label: 'New Step Field', required: false, step: maxStep + 1
     }
     setFields([...fields, newField]); setSelectedField(newField.id)
   }
@@ -147,7 +170,10 @@ export default function FormBuilder({ form }: { form: Form }) {
           {/* Fields Tab */}
           {activeTab === 'fields' && (
             <div className="p-4">
-              <p className="text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase mb-3">Add Field</p>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase">Add Field</p>
+                <button onClick={addStep} className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline">+ ADD STEP</button>
+              </div>
               <div className="grid grid-cols-3 gap-2 mb-6">
                 {FIELD_TYPES.map((ft) => (
                   <button key={ft.type} onClick={() => addField(ft.type)}
@@ -224,6 +250,12 @@ export default function FormBuilder({ form }: { form: Form }) {
                           rows={4} className={panelInputClass} />
                       </div>
                     )}
+                    <div>
+                      <label className={labelClass}>Step / Page Number</label>
+                      <input type="number" min={1} value={selectedFieldData.step}
+                        onChange={(e) => updateField(selectedFieldData.id, { step: parseInt(e.target.value) || 1 })}
+                        className={panelInputClass} />
+                    </div>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={selectedFieldData.required}
                         onChange={(e) => updateField(selectedFieldData.id, { required: e.target.checked })}
@@ -290,8 +322,8 @@ export default function FormBuilder({ form }: { form: Form }) {
 
           {/* Settings Tab */}
           {activeTab === 'settings' && (
-            <div className="p-4 space-y-4">
-              <p className="text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase mb-3">Form Settings</p>
+            <div className="p-4 space-y-6">
+              <p className="text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase mb-3">General Settings</p>
               <div>
                 <label className={labelClass}>Form Description</label>
                 <textarea value={description} onChange={(e) => setDescription(e.target.value)}
@@ -309,12 +341,46 @@ export default function FormBuilder({ form }: { form: Form }) {
                   onChange={(e) => setSettings({ ...settings, successMessage: e.target.value })}
                   rows={3} className={panelInputClass} />
               </div>
-              <div>
-                <label className={labelClass}>📧 Lead Notification Email</label>
-                <input type="email" value={settings.notificationEmail || ''}
-                  onChange={(e) => setSettings({ ...settings, notificationEmail: e.target.value })}
-                  placeholder="you@example.com" className={panelInputClass} />
-                <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Get an email every time a new lead submits this form</p>
+              
+              <div className="pt-4 border-t border-gray-100 dark:border-white/8">
+                <p className="text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase mb-4">Emails & Automation</p>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className={labelClass}>📧 Admin Notification Email</label>
+                    <input type="email" value={settings.notificationEmail || ''}
+                      onChange={(e) => setSettings({ ...settings, notificationEmail: e.target.value })}
+                      placeholder="you@example.com" className={panelInputClass} />
+                    <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-1">Where to send new lead alerts</p>
+                  </div>
+
+                  <div className="pt-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={settings.autoReplyEnabled}
+                        onChange={(e) => setSettings({ ...settings, autoReplyEnabled: e.target.checked })}
+                        className="rounded" />
+                      <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Enable Lead Auto-reply</span>
+                    </label>
+
+                    {settings.autoReplyEnabled && (
+                      <div className="space-y-4 mt-4 p-4 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5">
+                        <div>
+                          <label className={labelClass}>Auto-reply Subject</label>
+                          <input type="text" value={settings.autoReplySubject}
+                            onChange={(e) => setSettings({ ...settings, autoReplySubject: e.target.value })}
+                            className={panelInputClass} placeholder="e.g. Thanks for reaching out!" />
+                        </div>
+                        <div>
+                          <label className={labelClass}>Auto-reply Message</label>
+                          <textarea value={settings.autoReplyMessage}
+                            onChange={(e) => setSettings({ ...settings, autoReplyMessage: e.target.value })}
+                            className={panelInputClass} rows={4} placeholder="Write your thank you message..." />
+                          <p className="text-[10px] text-gray-400 mt-1 italic">Sent automatically to the lead's email.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -355,9 +421,13 @@ export default function FormBuilder({ form }: { form: Form }) {
               {fields.length === 0 ? (
                 <p className="text-sm text-center py-8" style={{color: '#9ca3af'}}>Add fields from the left panel</p>
               ) : (
-                <div className="space-y-4">
-                  {fields.map((field) => (
-                    <div key={field.id}>
+                <div className="space-y-6">
+                  {/* Group fields by step for preview */}
+                  {Array.from(new Set(fields.map(f => f.step))).sort((a, b) => a - b).map(stepNum => (
+                    <div key={stepNum} className="space-y-4 relative pt-4 border-t border-dashed border-gray-200">
+                      <span className="absolute -top-3 left-0 bg-white px-2 text-[10px] font-bold text-gray-400">PAGE {stepNum}</span>
+                      {fields.filter(f => f.step === stepNum).map((field) => (
+                        <div key={field.id}>
                       <label className="block text-sm font-medium mb-1" style={{color: '#374151'}}>
                         {field.label}
                         {field.required && <span className="text-red-500 ml-1">*</span>}
@@ -395,10 +465,18 @@ export default function FormBuilder({ form }: { form: Form }) {
                       )}
                     </div>
                   ))}
-                  <button className="w-full py-2.5 text-white font-semibold text-sm mt-2"
-                    style={{ backgroundColor: settings.accentColor, borderRadius: settings.borderRadius }}>
-                    {settings.submitLabel}
-                  </button>
+                    </div>
+                  ))}
+                  <div className="pt-2 flex gap-2">
+                    {/* Placeholder buttons for preview */}
+                    {fields.length > 0 && Math.max(...fields.map(f => f.step)) > 1 && (
+                      <button className="flex-1 py-2.5 bg-gray-100 text-gray-600 font-semibold text-sm" style={{ borderRadius: settings.borderRadius }}>Back</button>
+                    )}
+                    <button className="flex-1 py-2.5 text-white font-semibold text-sm"
+                      style={{ backgroundColor: settings.accentColor, borderRadius: settings.borderRadius }}>
+                      {settings.submitLabel}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

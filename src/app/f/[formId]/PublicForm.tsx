@@ -21,6 +21,7 @@ export default function PublicForm({ form }: { form: Form }) {
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [sourceParams, setSourceParams] = useState<Record<string, string>>({})
+  const [currentStep, setCurrentStep] = useState(1)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -45,10 +46,13 @@ export default function PublicForm({ form }: { form: Form }) {
     captured.referrer = document.referrer
     setSourceParams(captured)
   }, [])
+  const steps = Array.from(new Set(form.fields.map(f => f.step || 1))).sort((a, b) => a - b)
+  const maxStep = steps[steps.length - 1] || 1
+  const currentFields = form.fields.filter(f => (f.step || 1) === currentStep)
 
-  const validate = () => {
+  const validateStep = () => {
     const newErrors: Record<string, string> = {}
-    form.fields.forEach(field => {
+    currentFields.forEach(field => {
       if (field.required && !values[field.id]?.trim()) newErrors[field.id] = `${field.label} is required`
       if (field.type === 'email' && values[field.id]) {
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values[field.id])) newErrors[field.id] = 'Please enter a valid email'
@@ -58,8 +62,11 @@ export default function PublicForm({ form }: { form: Form }) {
     return Object.keys(newErrors).length === 0
   }
 
+  const handleNext = () => { if (validateStep()) setCurrentStep(prev => prev + 1) }
+  const handleBack = () => setCurrentStep(prev => prev - 1)
+
   const handleSubmit = async () => {
-    if (!validate()) return
+    if (!validateStep()) return
     setSubmitting(true)
     try {
       const res = await fetch('/api/leads', {
@@ -77,8 +84,7 @@ export default function PublicForm({ form }: { form: Form }) {
 
   const s = form.settings
 
-  // Shared input style — these are user-facing forms with custom bgColor,
-  // so we use inline style for bg and just ensure text is always readable
+  // Shared input style
   const inputBase = "w-full border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 transition text-gray-800 bg-white/80 placeholder-gray-400"
 
   if (submitted) {
@@ -98,11 +104,21 @@ export default function PublicForm({ form }: { form: Form }) {
       <div className="p-8">
         <h1 className="text-2xl font-bold mb-2" style={{ color: '#111827' }}>{form.name}</h1>
         {form.description && (
-          <p className="text-sm mb-6" style={{ color: '#6b7280' }}>{form.description}</p>
+          <p className="text-sm mb-4" style={{ color: '#6b7280' }}>{form.description}</p>
         )}
 
-        <div className="space-y-4 mt-6">
-          {form.fields.map((field) => (
+        {/* Progress bar */}
+        {maxStep > 1 && (
+          <div className="flex gap-1 mb-6">
+            {steps.map(step => (
+              <div key={step} className={`h-1 flex-1 rounded-full ${step <= currentStep ? 'bg-blue-600' : 'bg-gray-200 opacity-30'}`}
+                style={{ backgroundColor: step <= currentStep ? s.accentColor : undefined }} />
+            ))}
+          </div>
+        )}
+
+        <div className="space-y-4 mt-6 min-h-[120px]">
+          {currentFields.map((field) => (
             <div key={field.id}>
               <label className="block text-sm font-medium mb-1" style={{ color: '#374151' }}>
                 {field.label}
@@ -172,13 +188,32 @@ export default function PublicForm({ form }: { form: Form }) {
             </div>
           ))}
 
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="w-full py-3 text-white font-semibold text-sm disabled:opacity-60 transition mt-2"
-            style={{ backgroundColor: s.accentColor, borderRadius: s.borderRadius }}>
-            {submitting ? 'Submitting...' : s.submitLabel}
-          </button>
+          <div className="pt-2 flex gap-3">
+            {currentStep > 1 && (
+              <button
+                onClick={handleBack}
+                className="flex-1 py-3 bg-gray-100 text-gray-600 font-semibold text-sm transition"
+                style={{ borderRadius: s.borderRadius }}>
+                Back
+              </button>
+            )}
+            {currentStep < maxStep ? (
+              <button
+                onClick={handleNext}
+                className="flex-1 py-3 text-white font-semibold text-sm transition"
+                style={{ backgroundColor: s.accentColor, borderRadius: s.borderRadius }}>
+                Next
+              </button>
+            ) : (
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="flex-1 py-3 text-white font-semibold text-sm disabled:opacity-60 transition"
+                style={{ backgroundColor: s.accentColor, borderRadius: s.borderRadius }}>
+                {submitting ? 'Submitting...' : s.submitLabel}
+              </button>
+            )}
+          </div>
         </div>
 
         <p className="text-center text-xs mt-6" style={{ color: '#d1d5db' }}>Powered by FormTrack</p>

@@ -63,13 +63,12 @@ async function getOrg(db: Awaited<DB>, orgId: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (db as any)
     .from('orgs')
-    .select('id, plan, plan_expires_at, leads_used_this_month')
+    .select('id, plan, leads_used_this_month')
     .eq('id', orgId)
     .single() as Promise<{
       data: {
         id: string
         plan: string | null
-        plan_expires_at: string | null
         leads_used_this_month: number | null
       } | null
       error: unknown
@@ -137,10 +136,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Lead data must include at least one text field' }, { status: 400, headers: corsHeaders })
     }
 
-    const supabase = await createClient()
+    const { createAdminClient } = await import('@/lib/supabase/server')
+    const supabase = createAdminClient()
 
     // ── Fetch form ──────────────────────────────────────────────────────────
     const { data: formRow, error: formErr } = await getForm(supabase, form_id)
+    console.log('Leads API - Form Fetch:', { form_id, formRow, formErr })
+
     if (formErr || !formRow) {
       return NextResponse.json({ error: 'Form not found' }, { status: 404, headers: corsHeaders })
     }
@@ -150,14 +152,13 @@ export async function POST(req: NextRequest) {
 
     // ── Plan gating ─────────────────────────────────────────────────────────
     const { data: org, error: orgErr } = await getOrg(supabase, formRow.org_id)
+    console.log('Leads API - Org Fetch:', { org_id: formRow.org_id, org, orgErr })
+
     if (orgErr || !org) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404, headers: corsHeaders })
     }
 
-    const proActive = org.plan === 'pro' &&
-      !!org.plan_expires_at &&
-      new Date(org.plan_expires_at).getTime() > Date.now()
-    const plan: 'free' | 'pro' = proActive ? 'pro' : 'free'
+    const plan: 'free' | 'pro' = org.plan === 'pro' ? 'pro' : 'free'
     const limit = PLAN_LIMITS[plan].leads
 
     if (limit !== Infinity && (org.leads_used_this_month ?? 0) >= limit) {
@@ -201,8 +202,8 @@ export async function POST(req: NextRequest) {
       ip_address: ip,
     })
     if (insertErr) {
-      console.error('Lead insert failed:', insertErr)
-      return NextResponse.json({ error: 'Failed to save lead' }, { status: 500, headers: corsHeaders })
+      console.error('Lead insert failed:', JSON.stringify(insertErr, null, 2))
+      return NextResponse.json({ error: 'Failed to save lead', details: insertErr }, { status: 500, headers: corsHeaders })
     }
 
     const { error: incrementErr } = await incrementOrgLeadCount(
@@ -214,8 +215,10 @@ export async function POST(req: NextRequest) {
       console.error('Lead counter increment failed:', incrementErr)
     }
 
-    // ── Lead notification email ─────────────────────────────────────────────
+    // ── Lead notification & Auto-reply ─────────────────────────────────────
     const settings = formRow.settings as FormSettings
+    
+    // Notification to admin
     if (settings?.notificationEmail) {
       try {
         await sendLeadNotification({
@@ -226,6 +229,23 @@ export async function POST(req: NextRequest) {
         })
       } catch (notifyErr) {
         console.error('Lead notification failed:', notifyErr)
+      }
+    }
+
+    // Auto-reply to lead
+    if (settings?.autoReplyEnabled && settings?.autoReplySubject && settings?.autoReplyMessage) {
+      const leadEmail = Object.entries(sanitizedData).find(([k]) => k.toLowerCase().includes('email'))?.[1]
+      if (leadEmail && leadEmail.includes('@')) {
+        try {
+          await (await import('@/lib/notify')).sendAutoReply({
+            toEmail: leadEmail,
+            subject: settings.autoReplySubject,
+            message: settings.autoReplyMessage,
+            formName: formRow.name,
+          })
+        } catch (autoErr) {
+          console.error('Auto-reply failed:', autoErr)
+        }
       }
     }
 

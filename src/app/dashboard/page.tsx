@@ -5,180 +5,177 @@ export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { data: formsRaw } = await supabase.from('forms').select('id, name, is_active, created_at') as any
-  const { data: leadsRaw } = await supabase.from('leads').select('id, created_at, utm_source, source_summary') as any
+  const { data: formsRaw } = await supabase.from('forms').select('id, name, status, created_at') as any
+  const { data: leadsRaw } = await supabase.from('leads').select('id, created_at, utm_source, source_summary, data, forms(name)') as any
 
-  const forms = (formsRaw ?? []) as Array<{ id: string; name: string; is_active: boolean; created_at: string }>
-  const leads = (leadsRaw ?? []) as Array<{ id: string; created_at: string; utm_source?: string; source_summary?: string }>
+  const forms = (formsRaw ?? []) as Array<{ id: string; name: string; status: string; created_at: string }>
+  const leads = (leadsRaw ?? []) as Array<{ id: string; created_at: string; utm_source?: string; source_summary?: string; data: any; forms: { name: string } }>
 
   const totalForms = forms.length
-  const activeForms = forms.filter(f => f.is_active).length
+  const activeForms = forms.filter(f => f.status === 'active').length
   const totalLeads = leads.length
-  const today = new Date(); today.setHours(0, 0, 0, 0)
-  const leadsToday = leads.filter(l => new Date(l.created_at) >= today).length
+  
+  // Stats calculations
+  const now = new Date()
+  const todayStart = new Date(now.setHours(0, 0, 0, 0))
+  const leadsToday = leads.filter(l => new Date(l.created_at) >= todayStart).length
 
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
+  
+  const leadsThisWeek = leads.filter(l => new Date(l.created_at) >= sevenDaysAgo).length
+  const leadsLastWeek = leads.filter(l => {
+    const d = new Date(l.created_at)
+    return d >= fourteenDaysAgo && d < sevenDaysAgo
+  }).length
+  
+  const leadTrend = leadsLastWeek === 0 ? 100 : Math.round(((leadsThisWeek - leadsLastWeek) / leadsLastWeek) * 100)
+
+  // Top performing forms
+  const formLeadsMap: Record<string, number> = {}
+  leads.forEach(l => { if (l.forms?.name) formLeadsMap[l.forms.name] = (formLeadsMap[l.forms.name] || 0) + 1 })
+  const topForms = Object.entries(formLeadsMap).sort((a, b) => b[1] - a[1]).slice(0, 3)
+
+  // Source breakdown
   const sourceMap: Record<string, number> = {}
   leads.forEach(l => {
     const src = l.utm_source || 'Direct'
     sourceMap[src] = (sourceMap[src] || 0) + 1
   })
-  const sourceBreakdown = Object.entries(sourceMap).sort((a, b) => b[1] - a[1]).slice(0, 6)
+  const sourceBreakdown = Object.entries(sourceMap).sort((a, b) => b[1] - a[1]).slice(0, 4)
 
-  const last7: { label: string; count: number }[] = []
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i)
-    const next = new Date(d); next.setDate(next.getDate() + 1)
-    const count = leads.filter(l => { const t = new Date(l.created_at); return t >= d && t < next }).length
-    last7.push({ label: d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' }), count })
-  }
-  const maxCount = Math.max(...last7.map(d => d.count), 1)
-
-  const isNewUser = totalForms === 0 && totalLeads === 0
+  const cardClass = "bg-white dark:bg-[#1c2128] rounded-2xl border border-gray-100 dark:border-white/8 shadow-sm p-6"
 
   return (
-    <div className="p-6 md:p-8 max-w-5xl">
-
+    <div className="p-6 md:p-8 max-w-6xl space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-          <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">Welcome back, {user?.email?.split('@')[0]}</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Overview</h1>
+          <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">Hello, {user?.email?.split('@')[0]}! Here&apos;s how your forms are performing.</p>
         </div>
-        <Link
-          href="/dashboard/forms/new"
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition hidden sm:flex items-center gap-2 shadow-sm shadow-blue-500/20"
-        >
-          <span className="text-base leading-none">+</span> New Form
+        <Link href="/dashboard/forms/new" className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition flex items-center gap-2 shadow-sm shadow-blue-500/20">
+          <span>+</span> Create Form
         </Link>
       </div>
 
-      {/* New user onboarding banner */}
-      {isNewUser && (
-        <div className="bg-gradient-to-r from-blue-600 to-blue-500 dark:from-blue-700 dark:to-blue-600 rounded-2xl p-6 mb-8 text-white shadow-lg shadow-blue-500/20">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="font-bold text-xl mb-1">👋 Let&apos;s get you set up!</h2>
-              <p className="text-blue-100 text-sm mb-4 max-w-md">
-                Create your first form, embed it on your website, and start tracking where every lead comes from.
-              </p>
-              <div className="flex gap-3 flex-wrap">
-                <Link
-                  href="/dashboard/forms/new"
-                  className="bg-white hover:bg-blue-50 text-blue-600 px-4 py-2 rounded-xl text-sm font-semibold transition"
-                >
-                  Create First Form →
-                </Link>
-                <Link
-                  href="/onboarding"
-                  className="border border-blue-400/60 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-500/40 transition"
-                >
-                  View Setup Guide
-                </Link>
-              </div>
-            </div>
-            <div className="text-5xl hidden md:block">🚀</div>
+      {/* Main Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className={cardClass}>
+          <div className="flex items-center justify-between mb-4">
+            <span className="p-2 bg-blue-50 dark:bg-blue-500/10 rounded-lg text-blue-600 dark:text-blue-400">📊</span>
+            <span className={`text-xs font-bold px-2 py-1 rounded-full ${leadTrend >= 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+              {leadTrend >= 0 ? '↑' : '↓'} {Math.abs(leadTrend)}%
+            </span>
           </div>
+          <p className="text-sm text-gray-500 dark:text-slate-400">Leads this week</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{leadsThisWeek}</p>
+          <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">vs {leadsLastWeek} last week</p>
         </div>
-      )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-        {[
-          { label: 'Total Forms', value: totalForms, icon: '📋', href: '/dashboard/forms', color: 'blue' },
-          { label: 'Active Forms', value: activeForms, icon: '✅', href: '/dashboard/forms', color: 'green' },
-          { label: 'Total Leads', value: totalLeads, icon: '👥', href: '/dashboard/leads', color: 'purple' },
-          { label: 'Leads Today', value: leadsToday, icon: '⚡', href: '/dashboard/leads', color: 'amber' },
-        ].map((stat) => (
-          <Link key={stat.label} href={stat.href}>
-            <div className="bg-white dark:bg-[#1c2128] rounded-2xl p-5 border border-gray-100 dark:border-white/8 shadow-sm hover:shadow-md dark:hover:shadow-black/20 hover:border-blue-100 dark:hover:border-blue-500/30 transition-all cursor-pointer group">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm text-gray-500 dark:text-slate-400">{stat.label}</p>
-                <span className="text-xl">{stat.icon}</span>
-              </div>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
-            </div>
-          </Link>
-        ))}
+        <div className={cardClass}>
+          <div className="flex items-center justify-between mb-4">
+            <span className="p-2 bg-purple-50 dark:bg-purple-500/10 rounded-lg text-purple-600 dark:text-purple-400">👥</span>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-slate-400">Total Leads</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{totalLeads}</p>
+          <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">{leadsToday} arrived today</p>
+        </div>
+
+        <div className={cardClass}>
+          <div className="flex items-center justify-between mb-4">
+            <span className="p-2 bg-amber-50 dark:bg-amber-500/10 rounded-lg text-amber-600 dark:text-amber-400">📋</span>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-slate-400">Active Forms</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{activeForms}</p>
+          <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">out of {totalForms} total</p>
+        </div>
       </div>
 
-      {/* Charts */}
-      {totalLeads > 0 ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Bar chart */}
-          <div className="bg-white dark:bg-[#1c2128] rounded-2xl border border-gray-100 dark:border-white/8 shadow-sm p-6">
-            <h2 className="font-semibold text-gray-900 dark:text-white mb-5">Leads — Last 7 Days</h2>
-            <div className="flex items-end gap-2 h-36">
-              {last7.map((day) => (
-                <div key={day.label} className="flex-1 flex flex-col items-center gap-1">
-                  <span className="text-xs font-semibold text-gray-700 dark:text-slate-300">{day.count > 0 ? day.count : ''}</span>
-                  <div
-                    className="w-full rounded-t-lg transition-all"
-                    style={{
-                      height: `${(day.count / maxCount) * 100}%`,
-                      minHeight: day.count > 0 ? '4px' : '2px',
-                      backgroundColor: day.count > 0 ? '#3b82f6' : 'var(--color-border, #e5e7eb)'
-                    }}
-                  />
-                  <span className="text-xs text-gray-400 dark:text-slate-600 text-center leading-tight">{day.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Source breakdown */}
-          <div className="bg-white dark:bg-[#1c2128] rounded-2xl border border-gray-100 dark:border-white/8 shadow-sm p-6">
-            <h2 className="font-semibold text-gray-900 dark:text-white mb-5">Leads by Source</h2>
-            <div className="space-y-3">
+      {/* Charts & Top Forms */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Source Breakdown Chart */}
+        <div className={cardClass}>
+          <h2 className="font-bold text-gray-900 dark:text-white mb-6">Lead Sources</h2>
+          {totalLeads > 0 ? (
+            <div className="space-y-5">
               {sourceBreakdown.map(([src, count]) => (
                 <div key={src}>
-                  <div className="flex justify-between mb-1">
+                  <div className="flex justify-between mb-1.5">
                     <span className="text-sm text-gray-700 dark:text-slate-300 font-medium capitalize">{src}</span>
-                    <span className="text-sm text-gray-500 dark:text-slate-500">{count} ({Math.round(count / totalLeads * 100)}%)</span>
+                    <span className="text-sm text-gray-500">{count} leads</span>
                   </div>
-                  <div className="w-full bg-gray-100 dark:bg-white/8 rounded-full h-2">
-                    <div className="h-2 rounded-full bg-blue-500" style={{ width: `${(count / totalLeads) * 100}%` }} />
+                  <div className="w-full bg-gray-100 dark:bg-white/5 rounded-full h-2 overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(count / totalLeads) * 100}%` }} />
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+          ) : (
+            <div className="h-40 flex flex-col items-center justify-center text-center">
+              <p className="text-gray-400 text-sm">No data available yet</p>
+            </div>
+          )}
         </div>
-      ) : !isNewUser && (
-        <div className="bg-white dark:bg-[#1c2128] rounded-2xl border border-gray-100 dark:border-white/8 shadow-sm p-10 text-center mb-6">
-          <div className="text-4xl mb-3">📊</div>
-          <p className="font-semibold text-gray-700 dark:text-slate-300 mb-1">No leads yet</p>
-          <p className="text-sm text-gray-400 dark:text-slate-500 mb-4">Share your form link or embed it to start getting leads</p>
-          <Link href="/dashboard/forms" className="text-blue-600 dark:text-blue-400 text-sm hover:underline">View your forms →</Link>
-        </div>
-      )}
 
-      {/* Recent Forms */}
-      {forms.length > 0 && (
-        <div className="bg-white dark:bg-[#1c2128] rounded-2xl border border-gray-100 dark:border-white/8 shadow-sm">
-          <div className="px-6 py-4 border-b border-gray-100 dark:border-white/8 flex items-center justify-between">
-            <h2 className="font-semibold text-gray-900 dark:text-white">Your Forms</h2>
-            <Link href="/dashboard/forms" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">View all →</Link>
-          </div>
-          <div className="divide-y divide-gray-50 dark:divide-white/5">
-            {forms.slice(0, 5).map((form) => (
-              <div key={form.id} className="px-6 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-white/4 transition">
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">{form.name}</p>
-                  <p className="text-xs text-gray-400 dark:text-slate-500">Created {new Date(form.created_at).toLocaleDateString('en-IN')}</p>
+        {/* Top Performing Forms */}
+        <div className={cardClass}>
+          <h2 className="font-bold text-gray-900 dark:text-white mb-6">Top Performing Forms</h2>
+          {topForms.length > 0 ? (
+            <div className="divide-y divide-gray-50 dark:divide-white/5">
+              {topForms.map(([name, count], i) => (
+                <div key={name} className="py-4 first:pt-0 last:pb-0 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <span className="w-6 h-6 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-bold flex items-center justify-center">{i + 1}</span>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{name}</p>
+                  </div>
+                  <p className="text-sm font-bold text-gray-700 dark:text-slate-300">{count} leads</p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${form.is_active
-                    ? 'bg-green-50 dark:bg-green-500/15 text-green-700 dark:text-green-400'
-                    : 'bg-gray-100 dark:bg-white/8 text-gray-500 dark:text-slate-400'}`}>
-                    {form.is_active ? '● Active' : '○ Inactive'}
-                  </span>
-                  <Link href={`/dashboard/forms/${form.id}/edit`} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">Edit</Link>
+              ))}
+            </div>
+          ) : (
+            <div className="h-40 flex flex-col items-center justify-center text-center">
+              <p className="text-gray-400 text-sm">Create forms to see analytics</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Recent Leads Feed */}
+      <div className={cardClass}>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="font-bold text-gray-900 dark:text-white">Recent Activity</h2>
+          <Link href="/dashboard/leads" className="text-blue-600 text-sm font-semibold hover:underline">View all</Link>
+        </div>
+        {leads.length > 0 ? (
+          <div className="space-y-4">
+            {leads.slice(0, 5).map((lead) => (
+              <div key={lead.id} className="flex items-start gap-4 p-4 rounded-xl border border-gray-50 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/4 transition group cursor-pointer">
+                <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center shrink-0">
+                  <span className="text-lg">📧</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                      {lead.data.email || lead.data.name || 'New Lead'}
+                    </p>
+                    <span className="text-[10px] text-gray-400 dark:text-slate-500 whitespace-nowrap">
+                      {new Date(lead.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 truncate mt-0.5">
+                    {lead.forms.name} · {lead.source_summary}
+                  </p>
                 </div>
               </div>
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="py-12 text-center">
+            <p className="text-gray-400 text-sm">No recent activity detected.</p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

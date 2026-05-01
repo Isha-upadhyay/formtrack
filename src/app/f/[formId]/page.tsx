@@ -9,7 +9,7 @@ export default async function PublicFormPage({ params }: { params: Promise<{ for
   const { data: form } = await (supabase.from('forms') as any)
     .select('*')
     .eq('id', formId)
-    .eq('is_active', true)
+    .eq('status', 'active')
     .single()
 
   if (!form) notFound()
