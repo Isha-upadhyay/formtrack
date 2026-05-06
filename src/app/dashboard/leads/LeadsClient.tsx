@@ -106,9 +106,9 @@ export default function LeadsClient({ leads, forms }: { leads: LeadRow[]; forms:
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight font-syne">Leads</h1>
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight font-syne">Lead Analytics</h1>
           <p className="text-muted-foreground text-sm md:text-base">
-            Track and manage {leads.length} leads across your {forms.length} forms.
+            Track, filter, and analyze your conversions.
           </p>
         </div>
         
@@ -121,6 +121,9 @@ export default function LeadsClient({ leads, forms }: { leads: LeadRow[]; forms:
           Export Data
         </button>
       </div>
+
+      {/* Analytics Summary */}
+      {leads.length > 0 && <LeadStats leads={leads} forms={forms} />}
 
       {/* Modern Filter Bar */}
       <div className="glass dark:bg-white/5 p-4 rounded-[2rem] border border-white/5 space-y-4">
@@ -357,6 +360,101 @@ export default function LeadsClient({ leads, forms }: { leads: LeadRow[]; forms:
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function LeadStats({ leads, forms }: { leads: LeadRow[]; forms: FormOption[] }) {
+  const stats = useMemo(() => {
+    const total = leads.length
+    
+    // Calculate 7-day growth
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    const recentLeads = leads.filter(l => new Date(l.created_at) >= sevenDaysAgo).length
+    const growth = total > 0 ? Math.round((recentLeads / total) * 100) : 0
+
+    // Top Source
+    const sources = leads.map(l => l.utm_source || 'direct')
+    const sourceCount = sources.reduce((acc, curr) => {
+      acc[curr] = (acc[curr] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+    const topSource = Object.entries(sourceCount).sort((a, b) => b[1] - a[1])[0]
+
+    // Top Form
+    const formCounts = leads.reduce((acc, curr) => {
+      const name = curr.forms?.name || 'Unknown'
+      acc[name] = (acc[name] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+    const topForm = Object.entries(formCounts).sort((a, b) => b[1] - a[1])[0]
+
+    return {
+      total,
+      recentLeads,
+      growth,
+      topSourceName: topSource ? topSource[0] : 'None',
+      topSourceCount: topSource ? topSource[1] : 0,
+      topFormName: topForm ? topForm[0] : 'None',
+      topFormCount: topForm ? topForm[1] : 0
+    }
+  }, [leads])
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <StatCard 
+        title="Total Leads" 
+        value={stats.total.toString()} 
+        subtext={`+${stats.recentLeads} this week`}
+        trend={stats.growth}
+        color="blue"
+      />
+      <StatCard 
+        title="Top Source" 
+        value={<span className="capitalize">{stats.topSourceName}</span> as any} 
+        subtext={`${stats.topSourceCount} conversions`}
+        color="emerald"
+      />
+      <StatCard 
+        title="Top Form" 
+        value={stats.topFormName} 
+        subtext={`${stats.topFormCount} submissions`}
+        color="indigo"
+      />
+      <div className="glass dark:bg-white/5 p-6 rounded-[2rem] border border-white/5 flex flex-col items-center justify-center text-center relative overflow-hidden group hover:border-amber-500/30 transition-colors">
+         <div className="absolute top-[-20px] right-[-20px] w-24 h-24 bg-amber-500/10 blur-[30px] rounded-full group-hover:scale-150 transition-transform duration-700" />
+         <Sparkles className="w-8 h-8 text-amber-500 mb-2" />
+         <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">FormTrack AI</p>
+         <p className="text-sm font-bold mt-1">Analyzing Data...</p>
+      </div>
+    </div>
+  )
+}
+
+function StatCard({ title, value, subtext, trend, color }: { title: string, value: any, subtext: string, trend?: number, color: 'blue' | 'emerald' | 'indigo' }) {
+  const colors = {
+    blue: 'text-blue-600 bg-blue-600/10',
+    emerald: 'text-emerald-600 bg-emerald-600/10',
+    indigo: 'text-indigo-600 bg-indigo-600/10',
+  }
+  
+  return (
+    <div className="glass dark:bg-white/5 p-6 rounded-[2rem] border border-white/5 relative overflow-hidden group">
+       <div className={`absolute top-0 right-0 w-24 h-24 ${colors[color].split(' ')[1]} blur-[40px] rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-700`} />
+       
+       <div className="relative z-10">
+         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-4">{title}</p>
+         <h3 className="text-3xl font-black font-syne tracking-tight mb-2 truncate">{value}</h3>
+         <div className="flex items-center gap-2">
+           {trend !== undefined && (
+             <span className="px-2 py-0.5 rounded-md bg-green-500/10 text-green-600 text-[10px] font-black">
+               +{trend}%
+             </span>
+           )}
+           <p className="text-xs font-bold text-muted-foreground truncate">{subtext}</p>
+         </div>
+       </div>
     </div>
   )
 }

@@ -40,25 +40,23 @@ export async function proxy(request: NextRequest) {
   const isDashboardRoute = pathname.startsWith('/dashboard')
   const isPublic = isPublicPath(pathname)
 
+  // DEBUG: Log the auth status (you can remove this later)
+  console.log(`[Proxy] Path: ${pathname}, User: ${user ? user.email : 'None'}`)
+
+  // 1. If NOT logged in and trying to access DASHBOARD -> Redirect to LOGIN
+  if (!user && isDashboardRoute) {
+    const url = new URL('/login', request.url)
+    return NextResponse.redirect(url)
+  }
+
+  // 2. If NOT logged in and trying to access private API -> 401
   if (!user && isApiRoute && !isPublic) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  if (!user && isDashboardRoute) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
-  }
-
-  if (!user && !isPublic && !isApiRoute && !isDashboardRoute) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
-  }
-
+  // 3. If ALREADY logged in and trying to access LOGIN/SIGNUP -> Redirect to DASHBOARD
   if (user && (pathname.startsWith('/login') || pathname.startsWith('/signup'))) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
+    const url = new URL('/dashboard', request.url)
     return NextResponse.redirect(url)
   }
 

@@ -78,7 +78,60 @@ const TEMPLATES = [
     }
   },
   {
-    id: 'blank', name: 'Blank Form', icon: <Plus className="w-6 h-6 text-purple-500" />, description: 'Start from scratch',
+    id: 'waitlist', name: 'Waitlist', icon: <Zap className="w-6 h-6 text-purple-500" />, description: 'Build hype for your launch',
+    fields: [
+      { id: 'email', type: 'email', label: 'Email Address', placeholder: 'your@email.com', required: true, step: 1 },
+      { id: 'referral', type: 'text', label: 'How did you hear about us?', placeholder: 'Twitter, LinkedIn, etc.', required: false, step: 1 },
+    ],
+    settings: {
+      submitLabel: 'Join Waitlist', successMessage: 'You are on the list! Watch your inbox.',
+      notificationEmail: '', autoReplyEnabled: true,
+      autoReplySubject: 'You are on the waitlist!', autoReplyMessage: 'Hi,\n\nThanks for joining the waitlist. We will notify you as soon as we launch.',
+      bgColor: '#ffffff', accentColor: '#8b5cf6', fontFamily: 'Inter, sans-serif', borderRadius: '16px'
+    }
+  },
+  {
+    id: 'newsletter', name: 'Newsletter', icon: <Globe className="w-6 h-6 text-emerald-500" />, description: 'Simple email subscription',
+    fields: [
+      { id: 'email', type: 'email', label: 'Email Address', placeholder: 'your@email.com', required: true, step: 1 },
+    ],
+    settings: {
+      submitLabel: 'Subscribe', successMessage: 'Welcome to the newsletter!',
+      notificationEmail: '', autoReplyEnabled: true,
+      autoReplySubject: 'Welcome!', autoReplyMessage: 'Hi,\n\nThanks for subscribing to our newsletter. Get ready for awesome updates.',
+      bgColor: '#ffffff', accentColor: '#10b981', fontFamily: 'Inter, sans-serif', borderRadius: '16px'
+    }
+  },
+  {
+    id: 'feedback', name: 'Feedback', icon: <Sparkles className="w-6 h-6 text-pink-500" />, description: 'Collect user insights',
+    fields: [
+      { id: 'rating', type: 'select', label: 'Rating', required: true, options: ['⭐⭐⭐⭐⭐', '⭐⭐⭐⭐', '⭐⭐⭐', '⭐⭐', '⭐'], step: 1 },
+      { id: 'comment', type: 'textarea', label: 'What can we improve?', placeholder: 'Your thoughts...', required: true, step: 1 },
+    ],
+    settings: {
+      submitLabel: 'Submit Feedback', successMessage: 'Thanks for your feedback!',
+      notificationEmail: '', autoReplyEnabled: false,
+      autoReplySubject: 'Feedback Received', autoReplyMessage: 'Hi,\n\nThanks for sharing your thoughts with us.',
+      bgColor: '#ffffff', accentColor: '#ec4899', fontFamily: 'Inter, sans-serif', borderRadius: '16px'
+    }
+  },
+  {
+    id: 'job-app', name: 'Job App', icon: <FileText className="w-6 h-6 text-rose-500" />, description: 'Hiring and applications',
+    fields: [
+      { id: 'name', type: 'text', label: 'Full Name', placeholder: 'John Doe', required: true, step: 1 },
+      { id: 'email', type: 'email', label: 'Email', placeholder: 'you@email.com', required: true, step: 1 },
+      { id: 'portfolio', type: 'text', label: 'Portfolio/LinkedIn', placeholder: 'https://...', required: true, step: 2 },
+      { id: 'experience', type: 'textarea', label: 'Key Experience', placeholder: 'Tell us about your work...', required: true, step: 2 },
+    ],
+    settings: {
+      submitLabel: 'Apply Now', successMessage: 'Application received. We will be in touch.',
+      notificationEmail: '', autoReplyEnabled: true,
+      autoReplySubject: 'Application Received', autoReplyMessage: 'Hi,\n\nWe have received your application. Our team will review it and get back to you.',
+      bgColor: '#ffffff', accentColor: '#e11d48', fontFamily: 'Inter, sans-serif', borderRadius: '16px'
+    }
+  },
+  {
+    id: 'blank', name: 'Blank Form', icon: <Plus className="w-6 h-6 text-slate-500" />, description: 'Start from scratch',
     fields: [
       { id: 'name', type: 'text', label: 'Full Name', placeholder: 'Your name', required: true, step: 1 },
       { id: 'email', type: 'email', label: 'Email', placeholder: 'your@email.com', required: true, step: 1 },

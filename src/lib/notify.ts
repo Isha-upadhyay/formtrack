@@ -40,22 +40,26 @@ export async function sendLeadNotification({
   `
 
   try {
-    await fetch('https://api.resend.com/emails', {
+    const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'FormTrack <notifications@formtrack.app>',
+        from: 'onboarding@resend.dev',
         to: [toEmail],
         subject: `New lead from ${formName}`,
         html,
       }),
     })
+
+    if (!res.ok) {
+      const errorData = await res.json()
+      console.error('Resend API Error (Notification):', errorData)
+    }
   } catch (err) {
     console.error('Lead notification email failed:', err)
-    // Don't throw — email failure should not break form submission
   }
 }
 
@@ -83,7 +87,7 @@ export async function sendAutoReply({
   `
 
   try {
-    await fetch('https://api.resend.com/emails', {
+    const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -96,6 +100,11 @@ export async function sendAutoReply({
         html,
       }),
     })
+
+    if (!res.ok) {
+      const errorData = await res.json()
+      console.error('Resend API Error (AutoReply):', errorData)
+    }
   } catch (err) {
     console.error('Auto-reply email failed:', err)
   }

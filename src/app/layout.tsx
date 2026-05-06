@@ -16,7 +16,35 @@ const plusJakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: "FormTrack | Precision Lead Tracking for Modern Teams",
-  description: "Track every lead source with plain English insights. The ultimate SaaS for marketers and sales teams.",
+  description: "Stop guessing where your leads come from. Build beautiful forms, embed them anywhere, and get plain-English insights into exactly which campaign drove the conversion.",
+  keywords: ["form builder", "lead tracking", "marketing analytics", "UTM tracker", "SaaS forms"],
+  authors: [{ name: "FormTrack Team" }],
+  openGraph: {
+    title: "FormTrack | Precision Lead Tracking",
+    description: "Build beautiful forms, embed them anywhere, and get plain-English insights into exactly which campaign drove the conversion.",
+    url: "https://formtrack.app",
+    siteName: "FormTrack",
+    images: [
+      {
+        url: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&h=630&q=80",
+        width: 1200,
+        height: 630,
+        alt: "FormTrack Dashboard Preview",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "FormTrack | Precision Lead Tracking",
+    description: "Stop guessing where your leads come from. Build beautiful forms and track the exact source of every conversion.",
+    images: ["https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&h=630&q=80"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 }
 
 export default function RootLayout({
