@@ -25,41 +25,35 @@ export default async function DashboardPage() {
   const { data: profile } = await (supabase.from('profiles') as any).select('org_id').eq('id', user.id).single()
   if (!profile?.org_id) redirect('/onboarding')
 
-  // Fetch data limited to org
-  const { data: formsRaw } = await (supabase.from('forms') as any).select('id, name, status, created_at').eq('org_id', profile.org_id)
-  const { data: leadsRaw } = await (supabase.from('leads') as any).select('id, created_at, utm_source, source_summary, data, forms(name)').eq('org_id', profile.org_id)
+  // Fetch counts directly from DB
+  const { count: totalForms } = await (supabase.from('forms') as any).select('*', { count: 'exact', head: true }).eq('org_id', profile.org_id)
+  const { count: activeForms } = await (supabase.from('forms') as any).select('*', { count: 'exact', head: true }).eq('org_id', profile.org_id).eq('status', 'active')
+  const { count: totalLeads } = await (supabase.from('leads') as any).select('*', { count: 'exact', head: true }).eq('org_id', profile.org_id)
 
-  const forms = (formsRaw ?? []) as Array<{ id: string; name: string; status: string; created_at: string }>
-  const leads = (leadsRaw ?? []) as Array<{ id: string; created_at: string; utm_source?: string; source_summary?: string; data: any; forms: { name: string } }>
-
-  const totalForms = forms.length
-  const activeForms = forms.filter(f => f.status === 'active').length
-  const totalLeads = leads.length
-
-  // Stats calculations
   const now = new Date()
-  const todayStart = new Date(now.setHours(0, 0, 0, 0))
-  const leadsToday = leads.filter(l => new Date(l.created_at) >= todayStart).length
+  const todayStart = new Date(now.setHours(0, 0, 0, 0)).toISOString()
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
 
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
+  const { count: leadsToday } = await (supabase.from('leads') as any).select('*', { count: 'exact', head: true }).eq('org_id', profile.org_id).gte('created_at', todayStart)
+  const { count: leadsThisWeek } = await (supabase.from('leads') as any).select('*', { count: 'exact', head: true }).eq('org_id', profile.org_id).gte('created_at', sevenDaysAgo)
+  const { count: leadsLastWeek } = await (supabase.from('leads') as any).select('*', { count: 'exact', head: true }).eq('org_id', profile.org_id).gte('created_at', fourteenDaysAgo).lt('created_at', sevenDaysAgo)
 
-  const leadsThisWeek = leads.filter(l => new Date(l.created_at) >= sevenDaysAgo).length
-  const leadsLastWeek = leads.filter(l => {
-    const d = new Date(l.created_at)
-    return d >= fourteenDaysAgo && d < sevenDaysAgo
-  }).length
+  const leadTrend = (leadsLastWeek || 0) === 0 ? 100 : Math.round((((leadsThisWeek || 0) - (leadsLastWeek || 0)) / (leadsLastWeek || 1)) * 100)
 
-  const leadTrend = leadsLastWeek === 0 ? 100 : Math.round(((leadsThisWeek - leadsLastWeek) / leadsLastWeek) * 100)
+  // Fetch only top leads and top forms for display
+  const { data: leads } = await (supabase.from('leads') as any).select('id, created_at, utm_source, data, forms(name)').eq('org_id', profile.org_id).order('created_at', { ascending: false }).limit(5)
+  const { data: forms } = await (supabase.from('forms') as any).select('id, name, status, created_at').eq('org_id', profile.org_id).limit(10)
 
-  // Top performing forms
+  // Top performing forms aggregation (still doing this in JS for simplicity, but limited to recent data)
+  const { data: topFormsRaw } = await (supabase.from('leads') as any).select('forms(name)').eq('org_id', profile.org_id).limit(100)
   const formLeadsMap: Record<string, number> = {}
-  leads.forEach(l => { if (l.forms?.name) formLeadsMap[l.forms.name] = (formLeadsMap[l.forms.name] || 0) + 1 })
+  topFormsRaw?.forEach((l: any) => { if (l.forms?.name) formLeadsMap[l.forms.name] = (formLeadsMap[l.forms.name] || 0) + 1 })
   const topForms = Object.entries(formLeadsMap).sort((a, b) => b[1] - a[1]).slice(0, 3)
 
   // Source breakdown
   const sourceMap: Record<string, number> = {}
-  leads.forEach(l => {
+  leads.forEach((l: any) => {
     const src = l.utm_source || 'Direct'
     sourceMap[src] = (sourceMap[src] || 0) + 1
   })
@@ -192,7 +186,7 @@ export default async function DashboardPage() {
 
         {leads.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {leads.slice(0, 4).map((lead) => (
+            {leads.slice(0, 4).map((lead: any) => (
               <div key={lead.id} className="flex items-center gap-3 p-4 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl hover:border-blue-500/30 transition-all group shadow-sm dark:shadow-none">
                 <div className="w-10 h-10 bg-blue-600/10 text-blue-600 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                   <Mail className="w-4 h-4" />

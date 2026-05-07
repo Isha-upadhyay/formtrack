@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import ThemeToggle from '@/components/ThemeToggle'
 import {
@@ -121,7 +122,18 @@ export default function DashboardLayout({
   )
 
   return (
-    <div className="flex h-screen bg-white dark:bg-[#05070a] overflow-hidden">
+    <div className="flex h-screen bg-gray-50 dark:bg-[#05070a] overflow-hidden">
+      {/* Navigation Progress Bar */}
+      <div className="fixed top-0 left-0 right-0 z-[100] pointer-events-none">
+         <motion.div 
+           initial={{ scaleX: 0, opacity: 0 }}
+           animate={{ scaleX: 1, opacity: 1 }}
+           key={pathname}
+           transition={{ duration: 0.5, ease: "circOut" }}
+           className="h-0.5 bg-blue-600 origin-left"
+         />
+      </div>
+
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-64 flex-col flex-shrink-0 z-30">
         <SidebarContent />

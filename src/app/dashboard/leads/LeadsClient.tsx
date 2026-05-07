@@ -1,28 +1,15 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { 
-  Download, 
-  Search, 
-  Filter, 
-  Mail, 
-  ArrowUpRight,
-  ChevronRight,
-  TrendingUp,
-  Users,
-  Layout,
-  BarChart3,
-  Sparkles
-} from 'lucide-react'
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer 
-} from 'recharts'
+import { Loader2, Download, Search, Filter, Mail, ArrowUpRight, ChevronRight, TrendingUp, Users, Layout, BarChart3, Sparkles, Plus } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { fetchMoreLeads } from './actions'
+
+const LeadChart = dynamic(() => import('@/components/dashboard/LeadChart'), {
+  ssr: false,
+  loading: () => <Skeleton className="h-full w-full rounded-xl" />
+})
 
 interface Lead {
   id: string
@@ -34,10 +21,25 @@ interface Lead {
   }
 }
 
-export default function LeadsClient({ leads, forms }: { leads: Lead[], forms: any[] }) {
+export default function LeadsClient({ leads: initialLeads, forms }: { leads: Lead[], forms: any[] }) {
+  const [leads, setLeads] = useState(initialLeads)
+  const [page, setPage] = useState(1)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(initialLeads.length >= 10)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterSource, setFilterSource] = useState('all')
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
+
+  const handleLoadMore = async () => {
+    setLoadingMore(true)
+    const nextLeads = await fetchMoreLeads(page, 10)
+    if (nextLeads.length < 10) {
+      setHasMore(false)
+    }
+    setLeads([...leads, ...nextLeads as any])
+    setPage(page + 1)
+    setLoadingMore(false)
+  }
 
   const filteredLeads = useMemo(() => {
     return (leads || []).filter(lead => {
@@ -115,21 +117,7 @@ export default function LeadsClient({ leads, forms }: { leads: Lead[], forms: an
            <h2 className="text-lg font-bold font-syne text-foreground dark:text-white">Acquisition Trend</h2>
         </div>
         <div className="h-[300px] w-full">
-           <ResponsiveContainer width="100%" height="100%">
-             <AreaChart data={chartData}>
-               <defs>
-                 <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
-                   <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
-                   <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
-                 </linearGradient>
-               </defs>
-               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.1} />
-               <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} dy={10} />
-               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
-               <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }} />
-               <Area type="monotone" dataKey="leads" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorLeads)" />
-             </AreaChart>
-           </ResponsiveContainer>
+           <LeadChart data={chartData} />
         </div>
       </div>
 
@@ -178,6 +166,23 @@ export default function LeadsClient({ leads, forms }: { leads: Lead[], forms: an
             </div>
           ))}
         </div>
+
+        {hasMore && (
+          <div className="flex justify-center pt-8">
+            <button
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              className="flex items-center gap-2 px-8 py-4 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-foreground text-xs font-black uppercase tracking-widest rounded-2xl hover:bg-gray-100 dark:hover:bg-white/10 transition-all active:scale-95 shadow-sm disabled:opacity-50"
+            >
+              {loadingMore ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Plus className="w-4 h-4" />
+              )}
+              Load More Leads
+            </button>
+          </div>
+        )}
       </div>
 
       {selectedLead && (
