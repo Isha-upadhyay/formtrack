@@ -83,11 +83,6 @@ FormTrack follows a strict "Premium SaaS" design language:
 
 ---
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
 
 ## 🤝 Contributing
 
