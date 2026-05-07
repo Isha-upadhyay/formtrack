@@ -28,12 +28,16 @@ export default async function BillingPage() {
   }
 
   return (
-    <div className="p-8 max-w-3xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Billing</h1>
-        <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">Manage your subscription</p>
+    <div className="p-6 md:p-8 space-y-8 animate-in fade-in duration-700">
+      <div className="space-y-1">
+        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">Subscription</span>
+        <h1 className="text-2xl md:text-3xl font-black tracking-tight font-syne">Billing</h1>
+        <p className="text-muted-foreground text-sm font-medium">Manage your subscription and payment history.</p>
       </div>
-      <BillingClient org={org} />
+      
+      <div className="w-full">
+        <BillingClient org={org} />
+      </div>
     </div>
   )
 }
