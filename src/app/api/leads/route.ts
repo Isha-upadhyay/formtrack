@@ -63,13 +63,14 @@ async function getOrg(db: Awaited<DB>, orgId: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (db as any)
     .from('orgs')
-    .select('id, plan, leads_used_this_month')
+    .select('id, plan, leads_used_this_month, webhook_url')
     .eq('id', orgId)
     .single() as Promise<{
       data: {
         id: string
         plan: string | null
         leads_used_this_month: number | null
+        webhook_url: string | null
       } | null
       error: unknown
     }>
@@ -218,6 +219,20 @@ export async function POST(req: NextRequest) {
     // ── Lead notification & Auto-reply ─────────────────────────────────────
     const settings = formRow.settings as FormSettings
     
+    // Webhook notification
+    if (org.webhook_url) {
+      try {
+        const { triggerWebhook } = await import('@/lib/webhooks')
+        await triggerWebhook(org.webhook_url, {
+          formName: formRow.name,
+          leadData: sanitizedData,
+          sourceSummary: source_summary,
+        })
+      } catch (webhookErr) {
+        console.error('Webhook trigger failed:', webhookErr)
+      }
+    }
+
     // Notification to admin
     if (settings?.notificationEmail) {
       try {

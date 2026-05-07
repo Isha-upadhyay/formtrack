@@ -10,9 +10,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { name, orgId } = await req.json()
+    const { name, orgId, webhookUrl } = await req.json()
 
-    if (!name || !orgId) {
+    if (!orgId) {
       return NextResponse.json({ error: 'Missing data' }, { status: 400 })
     }
 
@@ -30,8 +30,12 @@ export async function POST(req: Request) {
     }
 
     // Update Org using admin client to bypass RLS
+    const updateData: any = {}
+    if (name) updateData.name = name
+    if (webhookUrl !== undefined) updateData.webhook_url = webhookUrl
+
     const { error: updateError } = await (adminSupabase.from('orgs') as any)
-      .update({ name })
+      .update(updateData)
       .eq('id', orgId)
 
     if (updateError) {

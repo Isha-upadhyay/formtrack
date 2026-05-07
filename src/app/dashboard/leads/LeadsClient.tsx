@@ -14,8 +14,21 @@ import {
   ChevronRight,
   MoreVertical,
   Inbox,
+  TrendingUp,
+  BarChart3,
   Sparkles
 } from 'lucide-react'
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  AreaChart,
+  Area
+} from 'recharts'
 
 interface LeadRow {
   id: string
@@ -33,6 +46,25 @@ interface LeadRow {
 
 interface FormOption { id: string; name: string }
 const PAGE_SIZE = 12
+
+const getChartData = (leads: LeadRow[]) => {
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date()
+    d.setDate(d.getDate() - i)
+    return d.toISOString().split('T')[0]
+  }).reverse()
+
+  const counts = leads.reduce((acc, lead) => {
+    const date = new Date(lead.created_at).toISOString().split('T')[0]
+    acc[date] = (acc[date] || 0) + 1
+    return acc
+  }, {} as Record<string, number>)
+
+  return last7Days.map(date => ({
+    date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    count: counts[date] || 0
+  }))
+}
 
 export default function LeadsClient({ leads, forms }: { leads: LeadRow[]; forms: FormOption[] }) {
   const [search, setSearch] = useState('')
@@ -124,6 +156,69 @@ export default function LeadsClient({ leads, forms }: { leads: LeadRow[]; forms:
 
       {/* Analytics Summary */}
       {leads.length > 0 && <LeadStats leads={leads} forms={forms} />}
+
+      {/* Analytics Chart */}
+      {leads.length > 0 && (
+        <div className="glass-card p-8 rounded-[3rem] border border-white/5 space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-600/10 rounded-2xl flex items-center justify-center text-blue-600">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+              <h2 className="text-xl font-bold font-syne">Conversion Trend</h2>
+            </div>
+            <div className="px-4 py-1.5 bg-blue-600/5 border border-blue-600/10 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-600">
+              Last 7 Days
+            </div>
+          </div>
+          
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={getChartData(leads)}>
+                <defs>
+                  <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                <XAxis 
+                  dataKey="date" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }}
+                  dy={10}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(255,255,255,0.8)', 
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: '16px',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'
+                  }}
+                  itemStyle={{ fontSize: 12, fontWeight: 800, color: '#2563eb' }}
+                  labelStyle={{ fontSize: 10, fontWeight: 900, marginBottom: 4, textTransform: 'uppercase', color: '#64748b' }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="count" 
+                  stroke="#2563eb" 
+                  strokeWidth={4}
+                  fillOpacity={1} 
+                  fill="url(#colorLeads)" 
+                  animationDuration={2000}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       {/* Modern Filter Bar */}
       <div className="glass dark:bg-white/5 p-4 rounded-[2rem] border border-white/5 space-y-4">

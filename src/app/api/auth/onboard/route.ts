@@ -35,6 +35,7 @@ export async function POST(req: Request) {
       .single()
 
     if (orgError || !org) {
+      console.error('Org Creation Error:', orgError)
       return NextResponse.json({ error: 'Failed to create organization' }, { status: 500 })
     }
 
@@ -47,11 +48,13 @@ export async function POST(req: Request) {
       })
 
     if (profError) {
+      console.error('Profile Creation Error:', profError)
       return NextResponse.json({ error: 'Failed to create profile' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true, org_id: org.id })
   } catch (err) {
+    console.error('Onboarding Server Error:', err)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
 }

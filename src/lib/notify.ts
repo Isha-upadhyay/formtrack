@@ -5,6 +5,45 @@
  * If key not set, silently skips (won't break form submissions).
  */
 
+export async function sendEmail({
+  to,
+  subject,
+  text,
+  html,
+}: {
+  to: string
+  subject: string
+  text: string
+  html: string
+}) {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) return
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'onboarding@resend.dev',
+        to: [to],
+        subject,
+        text,
+        html,
+      }),
+    })
+
+    if (!res.ok) {
+      const errorData = await res.json()
+      console.error('Resend API Error (sendEmail):', errorData)
+    }
+  } catch (err) {
+    console.error('Email delivery failed:', err)
+  }
+}
+
 export async function sendLeadNotification({
   toEmail,
   formName,
