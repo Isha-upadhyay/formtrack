@@ -9,12 +9,18 @@ export default async function FormsPage() {
   
   if (!user) redirect('/login')
 
+  const { data: profile } = await (supabase.from('profiles') as any)
+    .select('org_id')
+    .eq('id', user.id)
+    .single()
+
   const { data: formsData } = await supabase
     .from('forms')
     .select(`
       *,
       leads(count)
     `)
+    .eq('org_id', profile?.org_id)
     .order('created_at', { ascending: false })
 
   const forms = formsData || []
@@ -90,8 +96,16 @@ export default async function FormsPage() {
               
               <div className="flex items-center gap-2 md:gap-3 shrink-0">
                 <Link 
+                  href={`/dashboard/forms/${form.id}/analytics`}
+                  className="p-2.5 bg-gray-50 dark:bg-white/5 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-xl text-muted-foreground hover:text-indigo-600 transition-all border border-gray-100 dark:border-white/5"
+                  title="View Analytics"
+                >
+                  <BarChart3 className="w-4 h-4" />
+                </Link>
+                <Link 
                   href={`/dashboard/forms/${form.id}/settings`}
                   className="p-2.5 bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-xl text-muted-foreground hover:text-foreground transition-all border border-gray-100 dark:border-white/5"
+                  title="Settings"
                 >
                   <Settings2 className="w-4 h-4" />
                 </Link>

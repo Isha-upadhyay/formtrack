@@ -219,11 +219,12 @@ export async function POST(req: NextRequest) {
     // ── Lead notification & Auto-reply ─────────────────────────────────────
     const settings = formRow.settings as FormSettings
     
-    // Webhook notification
-    if (org.webhook_url) {
+    // Webhook notification (Form-specific has priority)
+    const webhookUrl = (settings as any)?.webhookUrl || org.webhook_url
+    if (webhookUrl) {
       try {
         const { triggerWebhook } = await import('@/lib/webhooks')
-        await triggerWebhook(org.webhook_url, {
+        await triggerWebhook(webhookUrl, {
           formName: formRow.name,
           leadData: sanitizedData,
           sourceSummary: source_summary,

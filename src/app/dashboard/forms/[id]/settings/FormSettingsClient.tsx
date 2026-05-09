@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { saveFormSettings } from './actions'
 import { 
   Settings2, 
   Palette, 
@@ -25,32 +25,30 @@ export default function FormSettingsClient({ form }: { form: any }) {
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
 
   const [formData, setFormData] = useState({
     name: form.name,
     description: form.description || '',
     settings: {
-      submitLabel: form.settings?.submitLabel || 'Submit',
-      successMessage: form.settings?.successMessage || 'Thank you for your submission!',
-      accentColor: form.settings?.accentColor || '#2563eb',
-      fontFamily: form.settings?.fontFamily || 'sans-serif',
-      borderRadius: form.settings?.borderRadius || '1rem',
-      redirectUrl: form.settings?.redirectUrl || ''
+      submitLabel: 'Submit',
+      successMessage: 'Thank you for your submission!',
+      accentColor: '#2563eb',
+      fontFamily: 'sans-serif',
+      borderRadius: '1rem',
+      redirectUrl: '',
+      webhookUrl: '',
+      ...form.settings // Spread existing settings to avoid data loss
     }
   })
 
   const handleSave = async () => {
     setLoading(true)
-    const { error } = await (supabase.from('forms') as any)
-      .update({
-        name: formData.name,
-        description: formData.description,
-        settings: formData.settings
-      })
-      .eq('id', form.id)
+    const result = await saveFormSettings(form.id, formData.name, formData.settings as any)
 
-    if (!error) {
+    if (result.error) {
+      console.error('SAVE_ERROR:', result.error)
+      alert('Error saving settings: ' + result.error)
+    } else {
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
       router.refresh()
@@ -62,7 +60,7 @@ export default function FormSettingsClient({ form }: { form: any }) {
   const labelClass = "text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2 block ml-1"
 
   return (
-    <div className="p-6 md:p-8 max-w-5xl mx-auto animate-in fade-in duration-700">
+    <div className="p-6 md:p-8 w-full animate-in fade-in duration-700">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
         <div className="flex items-center gap-4">
@@ -272,6 +270,24 @@ export default function FormSettingsClient({ form }: { form: any }) {
                      value={formData.settings.redirectUrl}
                      onChange={e => setFormData({ ...formData, settings: { ...formData.settings, redirectUrl: e.target.value } })}
                      placeholder="https://yourwebsite.com/thank-you"
+                   />
+                </div>
+
+                <div className="p-8 bg-indigo-600/5 border border-indigo-600/10 rounded-3xl space-y-4">
+                   <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
+                         <Zap className="w-5 h-5" />
+                      </div>
+                      <div>
+                         <p className="text-sm font-black tracking-tight">Notification Webhook (Slack/Discord)</p>
+                         <p className="text-xs text-muted-foreground font-medium">Get instant notifications specifically for this form.</p>
+                      </div>
+                   </div>
+                   <input 
+                     className={inputBase}
+                     value={(formData.settings as any).webhookUrl || ''}
+                     onChange={e => setFormData({ ...formData, settings: { ...formData.settings, webhookUrl: e.target.value } as any })}
+                     placeholder="https://hooks.slack.com/services/..."
                    />
                 </div>
 

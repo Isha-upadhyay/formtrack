@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import {
   ArrowRight,
   Target,
@@ -22,14 +24,43 @@ export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false)
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
 
+  const supabase = createClient()
+  const router = useRouter()
+
   useEffect(() => {
+    const url = window.location.href
+    const hash = window.location.hash
+    const search = window.location.search
+    
+    console.log('LANDING_DEBUG: URL:', url)
+    console.log('LANDING_DEBUG: Hash:', hash)
+    console.log('LANDING_DEBUG: Search:', search)
+
+    // Direct check for recovery tokens (Implicit Flow) or codes (PKCE Flow)
+    if (hash.includes('access_token') || search.includes('code=')) {
+      console.log('LANDING_DEBUG: Auth detected! Redirecting to /reset-password...')
+      window.location.assign('/reset-password' + hash + search)
+      return
+    }
+
+    // Handle Supabase password recovery event
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      console.log('LANDING_DEBUG: Auth Event:', event)
+      if (event === 'PASSWORD_RECOVERY') {
+        window.location.assign('/reset-password' + window.location.hash)
+      }
+    })
+
     const isDark = document.documentElement.classList.contains('dark')
     setTheme(isDark ? 'dark' : 'light')
 
     const handleScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      subscription.unsubscribe()
+    }
+  }, [supabase, router])
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light'

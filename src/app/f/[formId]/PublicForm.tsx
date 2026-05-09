@@ -22,7 +22,7 @@ interface Field {
 
 interface FormSettings {
   submitLabel: string; successMessage: string; bgColor: string; accentColor: string
-  fontFamily: string; borderRadius: string
+  fontFamily: string; borderRadius: string; redirectUrl?: string
 }
 
 interface Form {
@@ -89,7 +89,15 @@ export default function PublicForm({ form }: { form: Form }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ form_id: form.id, data: values, ...sourceParams }),
       })
-      if (res.ok) setSubmitted(true)
+      if (res.ok) {
+        setSubmitted(true)
+        const targetUrl = s.redirectUrl
+        if (targetUrl) {
+          setTimeout(() => {
+            window.location.href = targetUrl
+          }, 2000)
+        }
+      }
       else alert('Something went wrong. Please try again.')
     } catch {
       alert('Network error. Please try again.')

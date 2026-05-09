@@ -23,6 +23,7 @@ export interface FormSettings {
   autoReplySubject: string
   autoReplyMessage: string
   notificationEmail?: string
+  webhookUrl?: string
 }
 
 export interface FormDesign {
