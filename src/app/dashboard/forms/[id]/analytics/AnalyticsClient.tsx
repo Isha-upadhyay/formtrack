@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { ChevronLeft, BarChart3, Users, PieChart, TrendingUp, Sparkles } from 'lucide-react'
+import { ChevronLeft, BarChart3, Users, PieChart, TrendingUp, Sparkles, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { generateAIInsights } from './actions'
 
 const LeadChart = dynamic(() => import('@/components/dashboard/LeadChart'), {
   ssr: false,
@@ -21,6 +22,18 @@ interface Lead {
 
 export default function AnalyticsClient({ form, leads }: { form: any, leads: Lead[] }) {
   const [days, setDays] = useState(7)
+  const [loadingInsights, setLoadingInsights] = useState(false)
+  const [insightsHtml, setInsightsHtml] = useState<string | null>(null)
+  const [insightError, setInsightError] = useState<string | null>(null)
+
+  const handleGenerateInsights = async () => {
+    setLoadingInsights(true)
+    setInsightError(null)
+    const res = await generateAIInsights(form.id)
+    if (res.error) setInsightError(res.error)
+    if (res.insights) setInsightsHtml(res.insights)
+    setLoadingInsights(false)
+  }
 
   // Submissions over time
   const chartData = useMemo(() => {
@@ -121,19 +134,47 @@ export default function AnalyticsClient({ form, leads }: { form: any, leads: Lea
            </div>
         </div>
 
-        <div className="bg-gradient-to-br from-indigo-600 to-purple-700 p-8 rounded-[2rem] shadow-lg text-white flex flex-col justify-center relative overflow-hidden group cursor-not-allowed">
-           <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-white/10 blur-3xl rounded-full group-hover:scale-110 transition-transform duration-700" />
+        <div className="bg-gradient-to-br from-indigo-600 to-purple-700 p-8 rounded-[2rem] shadow-lg text-white flex flex-col justify-center relative overflow-hidden group">
+           <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-white/10 blur-3xl rounded-full group-hover:scale-110 transition-transform duration-700 pointer-events-none" />
            
-           <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-6 relative z-10">
-              <Sparkles className="w-6 h-6 text-white" />
+           <div className="flex items-center gap-4 mb-6 relative z-10">
+             <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-white" />
+             </div>
+             <div>
+               <h2 className="text-2xl font-black font-syne">AI Insights</h2>
+               <p className="text-white/80 text-xs font-medium uppercase tracking-widest">Powered by Gemini</p>
+             </div>
            </div>
-           <h2 className="text-2xl font-black font-syne mb-2 relative z-10">AI Insights</h2>
-           <p className="text-white/80 text-sm font-medium leading-relaxed mb-6 relative z-10">
-             Unlock deep analysis of your form fields. See exactly where users drop off, average completion times, and data quality scores.
-           </p>
-           <button disabled className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all w-fit relative z-10">
-             Coming Soon
-           </button>
+
+           <div className="relative z-10 flex-1 flex flex-col justify-center">
+             {loadingInsights ? (
+               <div className="flex flex-col items-center justify-center py-8 space-y-4">
+                 <Loader2 className="w-8 h-8 animate-spin text-white/80" />
+                 <p className="text-sm font-bold animate-pulse text-white/80">Analyzing form data...</p>
+               </div>
+             ) : insightsHtml ? (
+               <div className="space-y-4 text-sm leading-relaxed prose prose-invert prose-p:text-white/90 prose-li:text-white/90 prose-strong:text-indigo-200" dangerouslySetInnerHTML={{ __html: insightsHtml }} />
+             ) : (
+               <>
+                 <p className="text-white/80 text-sm font-medium leading-relaxed mb-6">
+                   Unlock deep analysis of your form fields. See exactly where users drop off, average completion times, and data quality scores based on your actual leads.
+                 </p>
+                 {insightError && (
+                   <p className="text-red-300 text-xs font-bold mb-4 bg-red-900/50 p-3 rounded-xl border border-red-500/30">
+                     {insightError}
+                   </p>
+                 )}
+                 <button 
+                   onClick={handleGenerateInsights}
+                   disabled={loadingInsights || leads.length === 0}
+                   className="bg-white hover:bg-white/90 text-indigo-700 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all w-fit shadow-xl shadow-black/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                 >
+                   {leads.length === 0 ? 'Not enough data' : 'Generate Insights'}
+                 </button>
+               </>
+             )}
+           </div>
         </div>
       </div>
     </div>
