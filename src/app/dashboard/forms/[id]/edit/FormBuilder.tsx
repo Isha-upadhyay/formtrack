@@ -304,53 +304,72 @@ export default function FormBuilder({ form }: { form: Form }) {
            {/* Canvas Decoration */}
            <div className="absolute inset-0 bg-grid opacity-[0.2]" />
            
-           <div className={`transition-all duration-500 bg-white shadow-2xl overflow-hidden relative ${
-             previewMode === 'mobile' ? 'w-[360px] h-[640px] rounded-[3rem] border-[8px] border-gray-900' : 'w-full max-w-2xl h-fit min-h-[400px] rounded-[2rem]'
-           }`} style={{ fontFamily: settings.fontFamily, backgroundColor: settings.bgColor }}>
-              
-              {/* Fake Browser/Mobile Bar */}
-              <div className={`flex items-center px-6 py-4 border-b border-gray-100 ${previewMode === 'mobile' ? 'justify-center' : 'justify-start'}`}>
-                {previewMode === 'desktop' && <div className="flex gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-400" /><div className="w-2.5 h-2.5 rounded-full bg-amber-400" /><div className="w-2.5 h-2.5 rounded-full bg-green-400" /></div>}
-                {previewMode === 'mobile' && <div className="w-16 h-4 bg-gray-100 rounded-full" />}
-              </div>
+            <div 
+              className={`transition-all duration-700 bg-white dark:bg-[#0d1117] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] dark:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] overflow-hidden relative ${
+                previewMode === 'mobile' ? 'w-[360px] h-[640px] rounded-[3rem] border-[10px] border-gray-900' : 'w-full max-w-2xl h-fit min-h-[400px] rounded-[3rem]'
+              }`} 
+              style={{ fontFamily: settings.fontFamily, backgroundColor: settings.bgColor }}
+            >
+               {/* Background Decorative Elements in Preview */}
+               <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                  <div className="absolute top-10 right-10 w-32 h-32 bg-blue-600/5 blur-[40px] rounded-full" />
+               </div>
 
-              <div className="p-10">
-                <h2 className="text-2xl font-black mb-2 tracking-tight" style={{ color: '#0f172a' }}>{name}</h2>
-                <p className="text-sm text-muted-foreground mb-10 leading-relaxed">{description || 'Start building your form to see it live here.'}</p>
+               <div className="p-8 md:p-14">
+                <div className="mb-8">
+                  <h2 className="text-3xl font-black mb-2 tracking-tighter text-foreground dark:text-white" style={{ color: '#0f172a' }}>{name}</h2>
+                  <p className="text-sm text-muted-foreground leading-relaxed font-medium">{description || 'Start building your form to see it live here.'}</p>
+                </div>
                 
                 {fields.length === 0 ? (
-                  <div className="py-20 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-[2rem] text-muted-foreground italic text-sm">
-                    Drag fields from the sidebar
+                  <div className="py-20 flex flex-col items-center justify-center border-2 border-dashed border-gray-100 dark:border-white/5 rounded-[2.5rem] text-muted-foreground italic text-sm bg-gray-50/50 dark:bg-white/[0.02]">
+                    Drag fields from the sidebar to begin
                   </div>
                 ) : (
-                  <div className="space-y-8">
+                  <div className="space-y-6">
                      {/* Preview grouped by steps */}
                      {Array.from(new Set(fields.map(f => f.step))).sort((a,b)=>a-b).map(stepNum => (
-                       <div key={stepNum} className="space-y-6 relative pt-6 border-t border-dashed border-gray-200 first:border-0 first:pt-0">
+                       <div key={stepNum} className="space-y-6 relative pt-10 border-t border-dashed border-gray-100 dark:border-white/5 first:border-0 first:pt-0">
+                         {stepNum > 1 && (
+                           <div className="absolute -top-3.5 left-0 right-0 flex justify-center">
+                             <span className="px-3 py-1 bg-gray-100 dark:bg-white/10 text-blue-600 text-[9px] font-black uppercase tracking-widest rounded-lg border border-gray-200 dark:border-white/5">Step {stepNum}</span>
+                           </div>
+                         )}
                          {fields.filter(f => f.step === stepNum).map(field => (
                             <div key={field.id} className="space-y-2">
-                               <label className="text-sm font-bold block" style={{ color: '#334155' }}>
-                                 {field.label} {field.required && <span className="text-red-500">*</span>}
+                               <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 ml-1">
+                                 {field.label} {field.required && <span className="text-red-500 ml-1">*</span>}
                                </label>
                                {field.type === 'textarea' ? (
-                                 <div className="w-full h-24 bg-gray-50 border border-gray-200 p-3" style={{ borderRadius: settings.borderRadius }} />
+                                 <div className="w-full h-24 bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/5 shadow-sm" style={{ borderRadius: settings.borderRadius }} />
                                ) : field.type === 'select' ? (
-                                 <div className="w-full h-12 bg-gray-50 border border-gray-200 flex items-center justify-between px-4" style={{ borderRadius: settings.borderRadius }}>
-                                   <span className="text-sm text-gray-400">Select an option</span>
+                                 <div className="w-full h-12 bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/5 flex items-center justify-between px-5 shadow-sm" style={{ borderRadius: settings.borderRadius }}>
+                                   <span className="text-xs font-bold text-gray-400">Select option</span>
                                    <ChevronDown className="w-4 h-4 text-gray-400" />
                                  </div>
+                               ) : field.type === 'radio' || field.type === 'checkbox' ? (
+                                 <div className="grid grid-cols-1 gap-2">
+                                    {field.options?.slice(0, 2).map(opt => (
+                                      <div key={opt} className="flex items-center gap-4 p-3 rounded-xl border border-gray-200 dark:border-white/5 bg-gray-50 dark:bg-white/[0.02] shadow-sm">
+                                         <div className={`w-4 h-4 rounded-md border border-gray-200 dark:border-white/10 bg-white dark:bg-transparent`} />
+                                         <span className="text-xs font-bold text-foreground/60">{opt}</span>
+                                      </div>
+                                    ))}
+                                 </div>
                                ) : (
-                                 <div className="w-full h-12 bg-gray-50 border border-gray-200 px-4" style={{ borderRadius: settings.borderRadius }} />
+                                 <div className="w-full h-12 bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/5 px-5 shadow-sm" style={{ borderRadius: settings.borderRadius }} />
                                )}
                             </div>
                          ))}
                        </div>
                      ))}
                      
-                     <button className="w-full py-4 text-white font-black text-sm transition-all hover:opacity-90 shadow-lg" 
-                       style={{ backgroundColor: settings.accentColor, borderRadius: settings.borderRadius }}>
-                       {settings.submitLabel}
-                     </button>
+                     <div className="pt-6">
+                        <button className="w-full py-4 text-white font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-500/10" 
+                          style={{ backgroundColor: settings.accentColor, borderRadius: settings.borderRadius }}>
+                          {settings.submitLabel}
+                        </button>
+                     </div>
                   </div>
                 )}
               </div>
